@@ -2,23 +2,20 @@ import Foundation
 import RouterCore
 import SQLite3
 
-/// Reads, on this Mac only, what each Dia profile is signed in to and where it browses, so
+/// Reads, on this Mac only, what each browser profile is signed in to and where it browses, so
 /// setup can draft profile descriptions. Nothing here leaves the Mac; only the descriptions
 /// the user keeps are sent to Jev.
 enum ProfileSignalsReader {
     static let historyDays = 90
 
-    private static var userData: URL {
-        FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Application Support/Dia/User Data", isDirectory: true)
-    }
-
-    static func signals(for profiles: [DiaProfile]) -> [ProfileSignals] {
-        profiles.map { profile in
-            ProfileSignals(
+    static func signals(for profiles: [BrowserProfile], in browser: BrowserKind) -> [ProfileSignals] {
+        let userData = browser.userDataDirectory()
+        return profiles.map { profile in
+            let folder = userData.appendingPathComponent(profile.directory, isDirectory: true)
+            return ProfileSignals(
                 name: profile.name,
-                accounts: accounts(for: profile),
-                siteVisits: ProfileDescriber.siteVisits(from: historyRows(directory: profile.directory))
+                accounts: accounts(for: profile, in: folder),
+                siteVisits: ProfileDescriber.siteVisits(from: historyRows(in: folder))
             )
         }
     }
@@ -38,9 +35,9 @@ enum ProfileSignalsReader {
         }
     }
 
-    private static func accounts(for profile: DiaProfile) -> [ProfileAccount] {
+    private static func accounts(for profile: BrowserProfile, in folder: URL) -> [ProfileAccount] {
         var accounts: [ProfileAccount] = profile.account.map { [$0] } ?? []
-        let url = userData.appendingPathComponent(profile.directory).appendingPathComponent("Preferences")
+        let url = folder.appendingPathComponent("Preferences")
         if let data = try? Data(contentsOf: url),
            let preferences = try? JSONDecoder().decode(Preferences.self, from: data) {
             for account in preferences.accountInfo ?? [] {
@@ -54,16 +51,16 @@ enum ProfileSignalsReader {
 
     // MARK: History
 
-    private static func historyRows(directory: String) -> [(url: String, visits: Int)] {
+    private static func historyRows(in folder: URL) -> [(url: String, visits: Int)] {
         // Chromium timestamps are microseconds since 1601-01-01.
         let cutoff = (Date().timeIntervalSince1970 - Double(historyDays) * 86_400 + 11_644_473_600) * 1_000_000
-        return query(directory: directory,
+        return query(folder: folder,
                      sql: "SELECT url, visit_count FROM urls WHERE hidden = 0 AND last_visit_time > ?1",
                      parameter: Int64(cutoff))
     }
 
-    private static func query(directory: String, sql: String, parameter: Int64) -> [(url: String, visits: Int)] {
-        let file = userData.appendingPathComponent(directory).appendingPathComponent("History")
+    private static func query(folder: URL, sql: String, parameter: Int64) -> [(url: String, visits: Int)] {
+        let file = folder.appendingPathComponent("History")
         guard FileManager.default.fileExists(atPath: file.path) else { return [] }
 
         // immutable=1: read Dia's live database without taking locks or touching its journal.

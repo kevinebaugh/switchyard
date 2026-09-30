@@ -57,7 +57,7 @@ final class RuleStore: ObservableObject {
 
     @discardableResult
     func upsert(key: RuleKey, profileName: String, origin: RuleOrigin) -> Rule {
-        mutate { $0.upsert(key: key, profileName: profileName, origin: origin) }
+        mutate { $0.upsert(key: key, profileName: profileName, origin: origin, browser: browser) }
     }
 
     func update(_ rule: Rule) {
@@ -69,8 +69,20 @@ final class RuleStore: ObservableObject {
     }
 
     func renameProfile(from oldName: String, to newName: String) {
-        mutate { $0.renameProfile(from: oldName, to: newName) }
+        mutate { $0.renameProfile(from: oldName, to: newName, browser: browser) }
     }
+
+    /// The selected browser's rules (rules for other browsers stay in the file, untouched).
+    var browserRules: [Rule] {
+        ruleSet.liveRules(for: browser)
+    }
+
+    /// The selected browser changed: match its rules from now on.
+    func browserChanged() {
+        apply(ruleSet)
+    }
+
+    private var browser: BrowserKind { AppSettings.shared.browser }
 
     func rule(id: UUID) -> Rule? {
         rulesByID[id]
@@ -116,7 +128,7 @@ final class RuleStore: ObservableObject {
 
     private func apply(_ set: RuleSet) {
         if set != ruleSet { ruleSet = set }
-        index = RuleIndex(rules: set.liveRules)
+        index = RuleIndex(rules: set.liveRules, browser: browser)
         rulesByID = Dictionary(set.rules.map { ($0.id, $0) }, uniquingKeysWith: { _, last in last })
     }
 

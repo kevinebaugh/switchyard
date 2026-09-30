@@ -68,7 +68,7 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         guard now.timeIntervalSince(lastRoutingNotification) >= Self.fallbackInterval else { return }
         lastRoutingNotification = now
 
-        registerCategories(for: DiaProfilesMonitor.shared.names)
+        registerCategories(for: ProfilesMonitor.shared.names)
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body

@@ -4,14 +4,15 @@ import RouterCore
 @MainActor
 final class OnboardingModel: ObservableObject {
     enum Step: Int, CaseIterable, Identifiable {
-        case welcome, permission, dia, jev, profiles, defaultBrowser, finish
+        case welcome, browser, permission, profileList, jev, profiles, defaultBrowser, finish
 
         var id: Int { rawValue }
 
         var shortTitle: String {
             switch self {
             case .welcome: "Welcome"
-            case .dia: "Dia"
+            case .browser: "Browser"
+            case .profileList: "Found"
             case .jev: "Jev"
             case .profiles: "Profiles"
             case .permission: "Permission"
@@ -38,12 +39,15 @@ final class OnboardingModel: ObservableObject {
     }
 
     @Published var step: Step = .welcome
-    @Published var diaInstalled = false
+    /// The browser setup is configuring (mirrors AppSettings.browser).
+    @Published var browser: BrowserKind
+    @Published var installedBrowsers: [BrowserKind] = []
+    @Published var browserInstalled = false
     @Published var profiles: [String] = []
     @Published var apiKeyDraft = ""
     @Published var keyState: KeyState = .empty
     /// nil until macOS has answered, so the step never flashes a wrong state.
-    @Published var permission: AutomationPermission?
+    @Published var permission: BrowserPermission?
     @Published var isAskingPermission = false
     @Published var isDefaultBrowser = false
     @Published var currentBrowserName: String?
@@ -57,17 +61,22 @@ final class OnboardingModel: ObservableObject {
 
     private let router = Router.shared
     private let settings = AppSettings.shared
-    private let monitor = DiaProfilesMonitor.shared
+    private let monitor = ProfilesMonitor.shared
     private var pollTask: Task<Void, Never>?
     private let isLive: Bool
 
     /// - Parameter live: false for snapshots: no polling, no system calls.
     init(live: Bool = true) {
         isLive = live
+        browser = AppSettings.shared.browser
         rulesLocation = settings.rulesLocation
         notifications = settings.notificationsEnabled
         guard live else { return }
         keyState = router.hasAPIKey ? .saved : .empty
+        let installed = Browsers.installed
+        if !installed.contains(browser), let first = installed.first(where: \.isVerified) ?? installed.first {
+            choose(first)
+        }
         refresh()
     }
 
@@ -76,7 +85,8 @@ final class OnboardingModel: ObservableObject {
     var canContinue: Bool {
         switch step {
         case .welcome, .profiles, .finish: true
-        case .dia: diaInstalled && !profiles.isEmpty
+        case .browser: installedBrowsers.contains(browser)
+        case .profileList: browserInstalled && !profiles.isEmpty
         case .jev: keyState != .checking && (hasKeyDraft || keyState.isReady)
         case .permission: permission == .granted
         case .defaultBrowser: isDefaultBrowser
@@ -113,7 +123,7 @@ final class OnboardingModel: ObservableObject {
         if step == .finish { finish(); return }
         guard var next = Step(rawValue: step.rawValue + 1) else { return }
         // Nothing to ask for when macOS already allows it (checked as soon as setup opens).
-        if next == .permission, permission == .granted { next = .dia }
+        if next == .permission, permission == .granted { next = .profileList }
         step = next
         refresh()
         entered(next)
@@ -129,10 +139,10 @@ final class OnboardingModel: ObservableObject {
         guard isLive else { return }
         switch step {
         case .permission:
-            Task { permission = await router.launcher.automationPermission(ask: false) }
-        case .dia:
+            Task { permission = await router.browser.permission(ask: false) }
+        case .profileList:
             Task {
-                await monitor.refreshVisibleOrder(using: router.launcher)
+                await monitor.refreshVisibleOrder(using: router.browser)
                 refresh()
             }
         case .profiles:
@@ -148,7 +158,7 @@ final class OnboardingModel: ObservableObject {
         guard isLive, pollTask == nil else { return }
         // Know the Automation answer before the Welcome step is done, so an already-granted
         // permission step can be skipped without a flash.
-        Task { permission = await router.launcher.automationPermission(ask: false) }
+        Task { permission = await router.browser.permission(ask: false) }
         pollTask = Task { [weak self] in
             while !Task.isCancelled {
                 await self?.poll()
@@ -166,7 +176,8 @@ final class OnboardingModel: ObservableObject {
     /// publishes values that changed (otherwise the whole window re-renders each tick).
     func refresh() {
         guard isLive else { return }
-        update(\.diaInstalled, to: router.launcher.diaApplicationURL != nil)
+        update(\.installedBrowsers, to: Browsers.installed)
+        update(\.browserInstalled, to: router.browser.isInstalled)
         update(\.profiles, to: monitor.refresh().map(\.name))
         update(\.isDefaultBrowser, to: DefaultBrowser.isDefault)
         update(\.currentBrowserName, to: DefaultBrowser.currentHandlerName)
@@ -183,7 +194,7 @@ final class OnboardingModel: ObservableObject {
     private func poll() async {
         refresh()
         if step == .permission, !isAskingPermission {
-            update(\.permission, to: await router.launcher.automationPermission(ask: false))
+            update(\.permission, to: await router.browser.permission(ask: false))
         }
     }
 
@@ -229,6 +240,17 @@ final class OnboardingModel: ObservableObject {
         }
     }
 
+    // MARK: Browser
+
+    func choose(_ kind: BrowserKind) {
+        guard isLive else { browser = kind; return }
+        router.selectBrowser(kind)
+        browser = kind
+        permission = nil
+        refresh()
+        Task { permission = await router.browser.permission(ask: false) }
+    }
+
     // MARK: Descriptions
 
     /// Draft descriptions from each profile's Google sign-in and distinctive sites, read locally.
@@ -242,8 +264,9 @@ final class OnboardingModel: ObservableObject {
         let fallback = settings.fallbackProfileName
 
         Task {
+            let browser = browser
             let signals = await Task.detached(priority: .userInitiated) {
-                ProfileSignalsReader.signals(for: all)
+                ProfileSignalsReader.signals(for: all, in: browser)
             }.value
             var drafted: [String] = []
             var blank: [String] = []
@@ -272,7 +295,7 @@ final class OnboardingModel: ObservableObject {
         case (false, false):
             return "Drafted on your Mac from the sites each profile uses most. Left \(names(blank)) blank: not enough history to go on."
         default:
-            return "Not enough history in Dia to draft descriptions yet. Write your own, or leave them blank for now."
+            return "Not enough browsing history to draft descriptions yet. Write your own, or leave them blank for now."
         }
     }
 
@@ -281,19 +304,22 @@ final class OnboardingModel: ObservableObject {
     func askPermission() {
         isAskingPermission = true
         Task {
-            await router.launcher.ensureRunning()
-            permission = await router.launcher.automationPermission(ask: true)
+            // Dia's Automation prompt needs Dia running; Chrome's data-access prompt doesn't.
+            if browser.opening == .appleScript { await router.browser.ensureRunning() }
+            permission = await router.browser.permission(ask: true)
             isAskingPermission = false
             if permission == .granted {
-                await monitor.refreshVisibleOrder(using: router.launcher)
+                monitor.refresh()
+                await monitor.refreshVisibleOrder(using: router.browser)
                 refresh()
                 if step == .permission { next() }
             }
         }
     }
 
-    func openAutomationSettings() {
-        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation")!)
+    func openPrivacySettings() {
+        let pane = browser.opening == .appleScript ? "?Privacy_Automation" : ""
+        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security\(pane)")!)
     }
 
     // MARK: Default browser

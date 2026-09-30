@@ -149,8 +149,11 @@ public struct Rule: Codable, Hashable, Identifiable, Sendable {
     public var pathPrefix: String?
     public var query: [String: String]?
     public var sourceApp: SourceApp?
-    /// Dia profile *name*, not directory: directories differ between Macs, names sync.
+    /// Profile *name*, not directory: directories differ between Macs, names sync.
     public var profileName: String
+    /// The browser this rule opens links in. nil in rules written before Switchyard supported
+    /// more than Dia; those are Dia rules.
+    public var browser: BrowserKind?
     public var origin: RuleOrigin
     public var updatedAt: Date
     public var deleted: Bool
@@ -160,6 +163,7 @@ public struct Rule: Codable, Hashable, Identifiable, Sendable {
         key: RuleKey,
         profileName: String,
         origin: RuleOrigin,
+        browser: BrowserKind? = nil,
         updatedAt: Date = Date(),
         deleted: Bool = false
     ) {
@@ -171,9 +175,12 @@ public struct Rule: Codable, Hashable, Identifiable, Sendable {
         self.sourceApp = key.sourceApp
         self.profileName = profileName
         self.origin = origin
+        self.browser = browser
         self.updatedAt = updatedAt
         self.deleted = deleted
     }
+
+    public var effectiveBrowser: BrowserKind { browser ?? .dia }
 
     public var key: RuleKey {
         get { RuleKey(host: host, hostMatch: hostMatch, pathPrefix: pathPrefix, query: query, sourceApp: sourceApp) }

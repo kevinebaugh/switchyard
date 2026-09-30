@@ -16,10 +16,11 @@ final class Router: ObservableObject {
     @Published private(set) var appRuleSuggestion: AppRuleSuggestion.Suggestion?
 
     let jev = JevClient()
-    let launcher = DiaLauncher()
+    /// The selected browser's adapter (Dia via AppleScript, Chrome & co. via their profile flag).
+    var browser: BrowserAdapter { Browsers.adapter(for: settings.browser) }
 
     private let settings = AppSettings.shared
-    private let profiles = DiaProfilesMonitor.shared
+    private let profiles = ProfilesMonitor.shared
     private let rules = RuleStore.shared
     private let history = HistoryStore.shared
     private let notifier = Notifier.shared
@@ -37,11 +38,11 @@ final class Router: ObservableObject {
     }
 
     func start() {
-        launcher.prepare()
+        browser.prepare()
         // Dia's profile order can wait; don't queue it ahead of the link that launched us.
         Task {
             try? await Task.sleep(for: .seconds(3))
-            await profiles.refreshVisibleOrder(using: launcher)
+            await profiles.refreshVisibleOrder(using: browser)
         }
         notifier.setUp(profiles: profiles.names)
         if settings.onboardingCompleted, settings.notificationsEnabled {
@@ -55,6 +56,16 @@ final class Router: ObservableObject {
         }
     }
 
+    /// Switch browsers (setup's browser step): profiles, rules and notification actions follow.
+    func selectBrowser(_ kind: BrowserKind) {
+        guard kind != settings.browser else { return }
+        settings.browser = kind
+        profiles.switchTo(kind)
+        rules.browserChanged()
+        notifier.registerCategories(for: profiles.names)
+        browser.prepare()
+    }
+
     func setAPIKey(_ key: String) {
         Keychain.saveAPIKey(key)
         apiKey = Keychain.readAPIKey()
@@ -64,7 +75,7 @@ final class Router: ObservableObject {
     func menuOpened() {
         attentionCount = 0
         profiles.refresh()
-        Task { await profiles.refreshVisibleOrder(using: launcher) }
+        Task { await profiles.refreshVisibleOrder(using: browser) }
         rules.reloadIfChangedOnDisk()
         refreshSuggestion()
         touchActivity()
@@ -153,7 +164,7 @@ final class Router: ObservableObject {
         }
 
         // Jev and a cold Dia launch overlap.
-        launcher.warmUp()
+        browser.warmUp()
 
         let request = Jev.makeRequest(
             features: features,
@@ -183,14 +194,17 @@ final class Router: ObservableObject {
     /// Returns an error message if the link couldn't be opened in the requested profile.
     private func open(_ url: URL, in profileName: String) async -> String? {
         do {
-            try await launcher.open(url, inProfile: profileName)
+            guard let profile = profiles.profile(named: profileName) else {
+                throw BrowserLaunchError.profileNotFound(profileName, settings.browser)
+            }
+            try await browser.open(url, in: profile)
             return nil
         } catch {
             let message = error.localizedDescription
             log.error("Open failed: \(message, privacy: .public)")
             notifier.notifySetupProblem(message)
             // Never lose the link: fall back to whatever profile Dia has focused.
-            try? await launcher.openInCurrentProfile(url)
+            try? await browser.openInCurrentProfile(url)
             return message
         }
     }

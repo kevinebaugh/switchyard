@@ -80,7 +80,7 @@ import Testing
     }
 }
 
-@Suite struct DiaLocalStateTests {
+@Suite struct ChromiumLocalStateTests {
     let json = """
     {"profile": {
       "info_cache": {
@@ -95,13 +95,13 @@ import Testing
     """
 
     @Test func parsesProfilesInDiaOrder() {
-        let profiles = DiaLocalState.profiles(from: Data(json.utf8))
+        let profiles = ChromiumLocalState.profiles(from: Data(json.utf8))
         #expect(profiles.map(\.name) == ["Personal", "Test", "Work"])
         #expect(profiles.map(\.directory) == ["Profile 2", "Profile 3", "Profile 4"])
     }
 
     @Test func readsColorAndAccount() {
-        let profiles = DiaLocalState.profiles(from: Data(json.utf8))
+        let profiles = ChromiumLocalState.profiles(from: Data(json.utf8))
         let work = profiles.first { $0.name == "Work" }
         #expect(work?.colorARGB == 0xFF00B785)
         #expect(work?.account == ProfileAccount(email: "you@acme.com", workspaceDomain: "acme.com"))
@@ -109,23 +109,23 @@ import Testing
     }
 
     @Test func sortsByDiaVisibleOrder() {
-        let profiles = DiaLocalState.profiles(from: Data(json.utf8))
-        #expect(DiaLocalState.sorted(profiles, visibleOrder: ["Personal", "Work", "Test"]).map(\.name) == ["Personal", "Work", "Test"])
-        #expect(DiaLocalState.sorted(profiles, visibleOrder: ["work"]).map(\.name) == ["Work", "Personal", "Test"])
-        #expect(DiaLocalState.sorted(profiles, visibleOrder: []).map(\.name) == ["Personal", "Test", "Work"])
+        let profiles = ChromiumLocalState.profiles(from: Data(json.utf8))
+        #expect(ChromiumLocalState.sorted(profiles, visibleOrder: ["Personal", "Work", "Test"]).map(\.name) == ["Personal", "Work", "Test"])
+        #expect(ChromiumLocalState.sorted(profiles, visibleOrder: ["work"]).map(\.name) == ["Work", "Personal", "Test"])
+        #expect(ChromiumLocalState.sorted(profiles, visibleOrder: []).map(\.name) == ["Personal", "Test", "Work"])
     }
 
     @Test func detectsRenames() {
-        let old = [DiaProfile(directory: "Profile 4", name: "Work"), DiaProfile(directory: "Profile 2", name: "Personal")]
-        let new = [DiaProfile(directory: "Profile 4", name: "Job"), DiaProfile(directory: "Profile 2", name: "Personal")]
-        let renames = DiaLocalState.renames(from: old, to: new)
+        let old = [BrowserProfile(directory: "Profile 4", name: "Work"), BrowserProfile(directory: "Profile 2", name: "Personal")]
+        let new = [BrowserProfile(directory: "Profile 4", name: "Job"), BrowserProfile(directory: "Profile 2", name: "Personal")]
+        let renames = ChromiumLocalState.renames(from: old, to: new)
         #expect(renames.count == 1)
         #expect(renames.first?.from == "Work")
         #expect(renames.first?.to == "Job")
     }
 
     @Test func garbageYieldsNoProfiles() {
-        #expect(DiaLocalState.profiles(from: Data("nope".utf8)).isEmpty)
+        #expect(ChromiumLocalState.profiles(from: Data("nope".utf8)).isEmpty)
     }
 }
 

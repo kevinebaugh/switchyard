@@ -20,7 +20,7 @@ struct SwitchyardApp: App {
                 .environmentObject(HistoryStore.shared)
                 .environmentObject(RuleStore.shared)
                 .environmentObject(RuleUsageStore.shared)
-                .environmentObject(DiaProfilesMonitor.shared)
+                .environmentObject(ProfilesMonitor.shared)
                 .environmentObject(AppSettings.shared)
         } label: {
             if router.attentionCount > 0 {
@@ -87,7 +87,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private static func sourceApp(senderPID: pid_t?) -> SourceApp? {
-        let ignored: Set<String?> = [Bundle.main.bundleIdentifier, DiaLauncher.bundleIdentifier]
+        let ignored: Set<String?> = [Bundle.main.bundleIdentifier, AppSettings.shared.browser.bundleIdentifier]
         var candidate: NSRunningApplication?
         if let senderPID, senderPID > 0,
            let sender = NSRunningApplication(processIdentifier: senderPID),

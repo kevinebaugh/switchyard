@@ -9,9 +9,9 @@ import SwiftUI
 enum Snapshots {
     /// Made-up profiles with Dia-style colors, so renders never show real ones.
     static let profiles = [
-        DiaProfile(directory: "Profile 1", name: "Personal", colorARGB: 0xFFEDA900),
-        DiaProfile(directory: "Profile 2", name: "Work", colorARGB: 0xFF00B785),
-        DiaProfile(directory: "Profile 3", name: "Test", colorARGB: 0xFF5F5AA2),
+        BrowserProfile(directory: "Profile 1", name: "Personal", colorARGB: 0xFFEDA900),
+        BrowserProfile(directory: "Profile 2", name: "Work", colorARGB: 0xFF00B785),
+        BrowserProfile(directory: "Profile 3", name: "Test", colorARGB: 0xFF5F5AA2),
     ]
 
     static func render(to directory: URL) {
@@ -23,7 +23,8 @@ enum Snapshots {
             for variant in variants(for: step) {
                 let model = OnboardingModel(live: false)
                 model.step = step
-                model.diaInstalled = true
+                model.browserInstalled = true
+                model.installedBrowsers = [.dia, .chrome]
                 model.profiles = profiles.map(\.name)
                 model.currentBrowserName = "Dia"
                 variant.configure(model)
@@ -87,7 +88,7 @@ enum Snapshots {
             rules.upsert(key: RuleKey(host: "acme.slack.com", hostMatch: .exact), profileName: "Work", origin: .learned),
             rules.upsert(key: RuleKey(host: "old-vendor.example", hostMatch: .domain), profileName: "Work", origin: .learned),
         ]
-        let all = rules.ruleSet.liveRules
+        let all = rules.browserRules
         for (index, rule) in all.enumerated() where rule.id != extra[3].id {
             for hit in 0...(index % 4) {
                 usage.recordUse(of: rule.id, at: now.addingTimeInterval(-Double(index * 3_600 + hit * 60)))
@@ -110,8 +111,10 @@ enum Snapshots {
 
     private static func variants(for step: OnboardingModel.Step) -> [Variant] {
         switch step {
-        case .dia:
-            [Variant(), Variant(suffix: "-missing") { $0.diaInstalled = false; $0.profiles = [] }]
+        case .browser:
+            [Variant(), Variant(suffix: "-chrome") { $0.browser = .chrome }]
+        case .profileList:
+            [Variant(), Variant(suffix: "-missing") { $0.browserInstalled = false; $0.profiles = [] }]
         case .jev:
             [Variant(),
              Variant(suffix: "-failed") { $0.apiKeyDraft = "ts_live_xxxxxxxx"; $0.keyState = .failed("TypeSafe didn't accept that key. Check it and try again.") },
@@ -127,6 +130,7 @@ enum Snapshots {
              Variant(suffix: "-drafting") { $0.isGenerating = true }]
         case .permission:
             [Variant { $0.permission = .notDetermined }, Variant(suffix: "-denied") { $0.permission = .denied },
+             Variant(suffix: "-chrome") { $0.browser = .chrome; $0.permission = .notDetermined },
              Variant(suffix: "-granted") { $0.permission = .granted }]
         case .defaultBrowser:
             [Variant(), Variant(suffix: "-done") { $0.isDefaultBrowser = true }]
@@ -138,7 +142,7 @@ enum Snapshots {
     /// `<name>-light.png` and `<name>-dark.png`, with the made-up profiles.
     private static func writeBothAppearances<V: View>(_ view: V, size: NSSize, to directory: URL, name: String) {
         let view = view
-            .environmentObject(DiaProfilesMonitor.shared)
+            .environmentObject(ProfilesMonitor.shared)
             .environment(\.profilesOverride, profiles)
             .background(Color(nsColor: .windowBackgroundColor))
         for (suffix, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {

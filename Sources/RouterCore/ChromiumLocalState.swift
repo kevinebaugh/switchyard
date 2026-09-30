@@ -1,6 +1,6 @@
 import Foundation
 
-public struct DiaProfile: Hashable, Sendable, Identifiable {
+public struct BrowserProfile: Hashable, Sendable, Identifiable {
     public let directory: String
     public let name: String
     /// The profile's color in Dia, as 0xAARRGGBB.
@@ -18,12 +18,12 @@ public struct DiaProfile: Hashable, Sendable, Identifiable {
     }
 }
 
-/// Reads Dia's Chromium `Local State`, the source of truth for which profiles exist.
+/// Reads a Chromium browser's `Local State` (Dia, Chrome, Brave…), the source of truth for
+/// which profiles exist.
 /// Adapted from jdsimcoe/dia-router's DiaProfileState (MIT); see THIRD_PARTY_NOTICES.md.
-public enum DiaLocalState {
-    public static var fileURL: URL {
-        FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Application Support/Dia/User Data/Local State")
+public enum ChromiumLocalState {
+    public static func fileURL(for browser: BrowserKind) -> URL {
+        browser.userDataDirectory().appendingPathComponent("Local State")
     }
 
     private struct LocalState: Decodable {
@@ -31,14 +31,26 @@ public enum DiaLocalState {
             struct Info: Decodable {
                 let name: String
                 let colorSeed: Int64?
+                let highlightColor: Int64?
+                let avatarFillColor: Int64?
                 let userName: String?
                 let hostedDomain: String?
 
                 enum CodingKeys: String, CodingKey {
                     case name
                     case colorSeed = "profile_color_seed"
+                    case highlightColor = "profile_highlight_color"
+                    case avatarFillColor = "default_avatar_fill_color"
                     case userName = "user_name"
                     case hostedDomain = "hosted_domain"
+                }
+
+                /// Dia keeps the profile color in the seed; Chrome in the highlight or avatar color.
+                /// Opaque black is Chromium's "unset".
+                var color: UInt32? {
+                    [colorSeed, highlightColor, avatarFillColor]
+                        .compactMap { $0.map { UInt32(truncatingIfNeeded: $0) } }
+                        .first { $0 != 0xFF00_0000 && $0 != 0 }
                 }
             }
 
@@ -54,16 +66,16 @@ public enum DiaLocalState {
         let profile: ProfileState
     }
 
-    public static func profiles(from data: Data) -> [DiaProfile] {
+    public static func profiles(from data: Data) -> [BrowserProfile] {
         guard let state = try? JSONDecoder().decode(LocalState.self, from: data) else { return [] }
         let order = state.profile.profilesOrder ?? []
 
         return state.profile.infoCache
             .map { directory, info in
-                DiaProfile(
+                BrowserProfile(
                     directory: directory,
                     name: info.name,
-                    colorARGB: info.colorSeed.map { UInt32(truncatingIfNeeded: $0) },
+                    colorARGB: info.color,
                     account: info.userName.flatMap { $0.isEmpty ? nil : ProfileAccount(email: $0, workspaceDomain: info.hostedDomain) }
                 )
             }
@@ -77,7 +89,7 @@ public enum DiaLocalState {
 
     /// Order profiles as Dia shows them (its scripting interface reports that order; `Local State`
     /// doesn't store it). Profiles missing from `visibleOrder` keep their relative order at the end.
-    public static func sorted(_ profiles: [DiaProfile], visibleOrder: [String]) -> [DiaProfile] {
+    public static func sorted(_ profiles: [BrowserProfile], visibleOrder: [String]) -> [BrowserProfile] {
         let rank = Dictionary(visibleOrder.enumerated().map { ($1.lowercased(), $0) }, uniquingKeysWith: { first, _ in first })
         return profiles.enumerated()
             .sorted { lhs, rhs in
@@ -89,7 +101,7 @@ public enum DiaLocalState {
     }
 
     /// Profiles whose directory is unchanged but whose name differs: Dia renames.
-    public static func renames(from old: [DiaProfile], to new: [DiaProfile]) -> [(from: String, to: String)] {
+    public static func renames(from old: [BrowserProfile], to new: [BrowserProfile]) -> [(from: String, to: String)] {
         new.compactMap { profile in
             guard let previous = old.first(where: { $0.directory == profile.directory }),
                   previous.name != profile.name else { return nil }

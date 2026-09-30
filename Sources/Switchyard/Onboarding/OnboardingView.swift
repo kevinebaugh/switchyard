@@ -14,7 +14,8 @@ struct OnboardingView: View {
             Group {
                 switch model.step {
                 case .welcome: WelcomeStep()
-                case .dia: DiaStep(model: model)
+                case .browser: BrowserStep(model: model)
+                case .profileList: ProfileListStep(model: model)
                 case .jev: JevStep(model: model)
                 case .profiles: ProfilesStep(model: model)
                 case .permission: PermissionStep(model: model)
@@ -51,7 +52,7 @@ struct OnboardingView: View {
             .padding(.vertical, 14)
         }
         .frame(width: 640, height: 560)
-        .environmentObject(DiaProfilesMonitor.shared)
+        .environmentObject(ProfilesMonitor.shared)
     }
 
     private var primaryTitle: String {
@@ -171,14 +172,14 @@ private struct WelcomeStep: View {
             Text("Welcome to Switchyard")
                 .font(.largeTitle.weight(.semibold))
                 .padding(.top, 8)
-            Text("Every link on the right track in Dia.")
+            Text("Every link on the right track in your browser.")
                 .font(.title3)
                 .foregroundStyle(.secondary)
                 .padding(.top, 4)
 
             VStack(alignment: .leading, spacing: 16) {
                 feature("arrow.triangle.branch", "The right profile, every time",
-                        "Links from other apps open in the Dia profile they belong to.")
+                        "Links from other apps open in the browser profile they belong to.")
                 feature("bolt", "Instant once it's learned",
                         "Rules answer in microseconds. For new sites, Jev decides in a fraction of a second.")
                 feature("arrow.uturn.backward", "Easy to correct",
@@ -204,36 +205,113 @@ private struct WelcomeStep: View {
     }
 }
 
-private struct DiaStep: View {
+private struct BrowserStep: View {
     @ObservedObject var model: OnboardingModel
 
     var body: some View {
         VStack(spacing: 0) {
             StepHeader(
+                symbol: "safari",
+                title: "Which browser do you use?",
+                subtitle: "Switchyard opens each link in the right profile of this browser."
+            )
+            if model.installedBrowsers.isEmpty {
+                Card {
+                    StatusRow(kind: .problem, text: "No supported browser found. Switchyard works with \(BrowserKind.allCases.map(\.displayName).joined(separator: ", ")).")
+                    HStack {
+                        Spacer()
+                        Button("Check Again", action: model.refresh)
+                    }
+                }
+            } else {
+                VStack(spacing: 8) {
+                    ForEach(model.installedBrowsers) { kind in
+                        BrowserChoice(kind: kind, isSelected: model.browser == kind) { model.choose(kind) }
+                    }
+                }
+                let others = BrowserKind.allCases.filter { !model.installedBrowsers.contains($0) }
+                if !others.isEmpty {
+                    Text("Also works with \(others.map(\.displayName).joined(separator: ", ")).")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(.top, 12)
+                }
+            }
+        }
+    }
+}
+
+private struct BrowserChoice: View {
+    let kind: BrowserKind
+    let isSelected: Bool
+    let select: () -> Void
+
+    var body: some View {
+        Button(action: select) {
+            HStack(spacing: 12) {
+                if let url = Browsers.adapter(for: kind).applicationURL {
+                    Image(nsImage: NSWorkspace.shared.icon(forFile: url.path))
+                        .resizable()
+                        .frame(width: 32, height: 32)
+                }
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(kind.displayName).font(.headline)
+                    if !kind.isVerified {
+                        Text("Should work; not yet tested").font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                Spacer()
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .font(.title3)
+                    .foregroundStyle(isSelected ? Color.accentColor : Color.secondary.opacity(0.5))
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .contentShape(Rectangle())
+            .background(
+                (isSelected ? Color.accentColor.opacity(0.1) : Color.secondary.opacity(0.08)),
+                in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .strokeBorder(isSelected ? Color.accentColor.opacity(0.6) : .clear, lineWidth: 1.5)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct ProfileListStep: View {
+    @ObservedObject var model: OnboardingModel
+
+    private var name: String { model.browser.displayName }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            StepHeader(
                 symbol: "person.2.crop.square.stack",
-                title: "Your Dia profiles",
-                subtitle: "Switchyard routes links between the profiles you already have in Dia. Add or rename them in Dia any time; Switchyard follows along."
+                title: "Your \(name) profiles",
+                subtitle: "Switchyard routes links between the profiles you already have in \(name). Add or rename them in \(name) any time; Switchyard follows along."
             )
             Card {
-                if !model.diaInstalled {
-                    StatusRow(kind: .problem, text: "Dia isn't installed.")
+                if !model.browserInstalled {
+                    StatusRow(kind: .problem, text: "\(name) isn't installed.")
                     HStack {
-                        Link("Get Dia", destination: URL(string: "https://www.diabrowser.com/")!)
                         Spacer()
                         Button("Check Again", action: model.refresh)
                     }
                 } else if model.profiles.isEmpty {
-                    StatusRow(kind: .problem, text: "Dia is installed, but no profiles were found. Open Dia once, then check again.")
+                    StatusRow(kind: .problem, text: "\(name) is installed, but no profiles were found. Open \(name) once, then check again.")
                     HStack {
                         Spacer()
                         Button("Check Again", action: model.refresh)
                     }
                 } else {
-                    StatusRow(kind: .good, text: "Found \(model.profiles.count) \(model.profiles.count == 1 ? "profile" : "profiles") in Dia")
+                    StatusRow(kind: .good, text: "Found \(model.profiles.count) \(model.profiles.count == 1 ? "profile" : "profiles") in \(name)")
                     FlowChips(names: model.profiles)
                         .animation(.easeInOut(duration: 0.25), value: model.profiles)
                     if model.profiles.count == 1 {
-                        Text("With one profile there's nothing to route yet. Create more in Dia (for example Work and Personal), and they'll appear here.")
+                        Text("With one profile there's nothing to route yet. Create more in \(name) (for example Work and Personal), and they'll appear here.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -312,7 +390,7 @@ private struct ProfilesStep: View {
             HStack(spacing: 8) {
                 if model.isGenerating {
                     ProgressView().controlSize(.small)
-                    Text("Drafting descriptions from your Dia profiles…")
+                    Text("Drafting descriptions from your \(model.browser.displayName) profiles…")
                 } else if let note = model.generationNote {
                     Image(systemName: "wand.and.sparkles").foregroundStyle(Color.accentColor)
                     Text(note)
@@ -321,7 +399,7 @@ private struct ProfilesStep: View {
                 Button("Redraft All") { model.generateDescriptions(overwrite: true) }
                     .controlSize(.small)
                     .disabled(model.isGenerating)
-                    .help("Replace every description with a fresh draft from Dia")
+                    .help("Replace every description with a fresh draft from \(model.browser.displayName)")
             }
             .font(.caption)
             .foregroundStyle(.secondary)
@@ -385,44 +463,76 @@ private struct ProfilesStep: View {
 private struct PermissionStep: View {
     @ObservedObject var model: OnboardingModel
 
-    var body: some View {
-        VStack(spacing: 0) {
-            StepHeader(
-                symbol: "hand.raised",
-                title: "Let Switchyard open tabs in Dia",
-                subtitle: "Switchyard asks Dia to open each link in the right profile, and to list your profiles in Dia's order. macOS will ask you to allow this once."
+    /// Dia needs Automation to open tabs; Chrome & co. only need Switchyard to read their
+    /// (macOS-protected) profile list.
+    private struct Copy {
+        let title, subtitle, action, granted, denied, footnote: String
+    }
+
+    private var copy: Copy {
+        let name = model.browser.displayName
+        switch model.browser.opening {
+        case .appleScript:
+            return Copy(
+                title: "Let Switchyard open tabs in \(name)",
+                subtitle: "Switchyard asks \(name) to open each link in the right profile, and to list your profiles in \(name)'s order. macOS will ask you to allow this once.",
+                action: "Allow Switchyard to Control \(name)…",
+                granted: "Switchyard can open tabs in \(name).",
+                denied: "macOS is blocking Switchyard from controlling \(name). Turn on \(name) under Switchyard in Privacy & Security → Automation.",
+                footnote: "This lets Switchyard send commands to \(name) only. It can't see or control other apps."
             )
+        case .profileDirectoryFlag:
+            return Copy(
+                title: "Let Switchyard read your \(name) profiles",
+                subtitle: "Switchyard reads \(name)'s profile list, and on this Mac only the sites each profile uses most, so it can set itself up. macOS will ask you to allow this once.",
+                action: "Allow Access to \(name) Profiles…",
+                granted: "Switchyard can read your \(name) profiles.",
+                denied: "macOS is blocking Switchyard from reading \(name)'s data. Allow Switchyard in System Settings → Privacy & Security (App Data, or Full Disk Access), then check again.",
+                footnote: "Links open with \(name)'s own profile switch, so Switchyard doesn't need to control \(name) or any other app."
+            )
+        }
+    }
+
+    var body: some View {
+        let copy = copy
+        VStack(spacing: 0) {
+            StepHeader(symbol: "hand.raised", title: copy.title, subtitle: copy.subtitle)
             Card {
                 switch model.permission {
                 case nil:
                     PendingRow(text: "Checking with macOS…")
                     // Reserve the button row the answer will need, so the card doesn't grow.
-                    Button("Allow Switchyard to Control Dia…") {}
+                    Button(copy.action) {}
                         .buttonStyle(.borderedProminent)
                         .hidden()
                         .accessibilityHidden(true)
                 case .granted:
-                    StatusRow(kind: .good, text: "Switchyard can open tabs in Dia.")
+                    StatusRow(kind: .good, text: copy.granted)
                 case .denied:
-                    StatusRow(kind: .problem, text: "macOS is blocking Switchyard from controlling Dia. Turn on Dia under Switchyard in Privacy & Security → Automation.")
-                    Button("Open Automation Settings", action: model.openAutomationSettings)
-                case .diaNotRunning where !model.isAskingPermission:
-                    StatusRow(kind: .neutral, text: "Dia isn't running. Switchyard will open it to ask.")
-                    Button("Allow Switchyard to Control Dia…", action: model.askPermission)
+                    StatusRow(kind: .problem, text: copy.denied)
+                    HStack {
+                        Button("Open Privacy & Security", action: model.openPrivacySettings)
+                        if model.browser.opening == .profileDirectoryFlag {
+                            Button("Check Again", action: model.askPermission)
+                        }
+                    }
+                case .browserNotRunning where !model.isAskingPermission:
+                    StatusRow(kind: .neutral, text: "\(model.browser.displayName) isn't running. Switchyard will open it to ask.")
+                    Button(copy.action, action: model.askPermission)
                         .buttonStyle(.borderedProminent)
                 default:
                     if model.isAskingPermission {
                         StatusRow(kind: .waiting, text: "Waiting for your answer in the macOS dialog…")
                     } else {
                         StatusRow(kind: .neutral, text: "Not allowed yet.")
-                        Button("Allow Switchyard to Control Dia…", action: model.askPermission)
+                        Button(copy.action, action: model.askPermission)
                             .buttonStyle(.borderedProminent)
                     }
                 }
             }
             // A soft cross-fade between states.
             .animation(.easeInOut(duration: 0.2), value: model.permission)
-            Text("This lets Switchyard send commands to Dia only. It can't see or control other apps.")
+            Text(copy.footnote)
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -439,7 +549,7 @@ private struct DefaultBrowserStep: View {
             StepHeader(
                 symbol: "link",
                 title: "Make Switchyard your default browser",
-                subtitle: "Links you click in other apps come to Switchyard first, then open in Dia, in the right profile. Links you click inside Dia stay in Dia."
+                subtitle: "Links you click in other apps come to Switchyard first, then open in \(model.browser.displayName), in the right profile. Links you click inside \(model.browser.displayName) stay there."
             )
             Card {
                 if model.isDefaultBrowser {

@@ -58,6 +58,11 @@ final class AppSettings: ObservableObject {
 
     private let defaults = AppEnvironment.defaults
 
+    /// The browser links open in. Installs from before multi-browser support are Dia.
+    @Published var browser: BrowserKind {
+        didSet { defaults.set(browser.rawValue, forKey: "browser") }
+    }
+
     @Published var rulesLocation: RulesLocation {
         didSet { defaults.set(rulesLocation.rawValue, forKey: "rulesLocation") }
     }
@@ -88,6 +93,7 @@ final class AppSettings: ObservableObject {
     }
 
     private init() {
+        browser = defaults.string(forKey: "browser").flatMap(BrowserKind.init(rawValue:)) ?? .dia
         rulesLocation = defaults.string(forKey: "rulesLocation").flatMap(RulesLocation.init(rawValue:))
             ?? RulesLocation.automatic
         profileThreshold = defaults.object(forKey: "profileThreshold") as? Double ?? DecisionPolicy.defaultProfileThreshold

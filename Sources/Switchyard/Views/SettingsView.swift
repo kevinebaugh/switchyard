@@ -5,7 +5,7 @@ import SwiftUI
 struct SettingsView: View {
     @EnvironmentObject private var router: Router
     @EnvironmentObject private var rules: RuleStore
-    @EnvironmentObject private var profiles: DiaProfilesMonitor
+    @EnvironmentObject private var profiles: ProfilesMonitor
     @EnvironmentObject private var settings: AppSettings
 
     @State private var apiKeyDraft = ""
@@ -88,7 +88,7 @@ struct SettingsView: View {
             } header: {
                 Text("What each profile is for")
             } footer: {
-                Text("Profiles come from Dia. Jev reads these descriptions to decide.")
+                Text("Profiles come from \(settings.browser.displayName). Jev reads these descriptions to decide.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -114,6 +114,13 @@ struct SettingsView: View {
             }
 
             Section("System") {
+                LabeledContent("Browser") {
+                    HStack {
+                        Text(settings.browser.displayName)
+                        Button("Change…") { OnboardingWindow.shared.show() }
+                            .help("Setup lets you pick another browser")
+                    }
+                }
                 LabeledContent("Default browser") {
                     if isDefaultBrowser {
                         Label("Switchyard", systemImage: "checkmark.circle.fill")

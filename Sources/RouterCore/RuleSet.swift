@@ -16,19 +16,29 @@ public struct RuleSet: Codable, Equatable, Sendable {
         rules.filter { !$0.deleted }
     }
 
-    public func rule(for key: RuleKey) -> Rule? {
-        rules.first { !$0.deleted && $0.key == key }
+    public func liveRules(for browser: BrowserKind) -> [Rule] {
+        rules.filter { !$0.deleted && $0.effectiveBrowser == browser }
+    }
+
+    public func rule(for key: RuleKey, browser: BrowserKind = .dia) -> Rule? {
+        rules.first { !$0.deleted && $0.key == key && $0.effectiveBrowser == browser }
     }
 
     @discardableResult
-    public mutating func upsert(key: RuleKey, profileName: String, origin: RuleOrigin, now: Date = Date()) -> Rule {
-        if let index = rules.firstIndex(where: { !$0.deleted && $0.key == key }) {
+    public mutating func upsert(
+        key: RuleKey,
+        profileName: String,
+        origin: RuleOrigin,
+        browser: BrowserKind = .dia,
+        now: Date = Date()
+    ) -> Rule {
+        if let index = rules.firstIndex(where: { !$0.deleted && $0.key == key && $0.effectiveBrowser == browser }) {
             rules[index].profileName = profileName
             rules[index].origin = origin
             rules[index].updatedAt = now
             return rules[index]
         }
-        let rule = Rule(key: key, profileName: profileName, origin: origin, updatedAt: now)
+        let rule = Rule(key: key, profileName: profileName, origin: origin, browser: browser, updatedAt: now)
         rules.append(rule)
         return rule
     }
@@ -47,9 +57,9 @@ public struct RuleSet: Codable, Equatable, Sendable {
     }
 
     /// Dia renamed a profile on this Mac: follow it in every rule.
-    public mutating func renameProfile(from oldName: String, to newName: String, now: Date = Date()) {
+    public mutating func renameProfile(from oldName: String, to newName: String, browser: BrowserKind = .dia, now: Date = Date()) {
         for index in rules.indices
-        where !rules[index].deleted
+        where !rules[index].deleted && rules[index].effectiveBrowser == browser
             && rules[index].profileName.compare(oldName, options: .caseInsensitive) == .orderedSame {
             rules[index].profileName = newName
             rules[index].updatedAt = now
@@ -65,12 +75,15 @@ public struct RuleSet: Codable, Equatable, Sendable {
         }
 
         // Two Macs can independently create a rule for the same key. Keep the newest.
-        var newestByKey: [RuleKey: Rule] = [:]
+        struct Identity: Hashable { let key: RuleKey; let browser: BrowserKind }
+        var newest: [Identity: Rule] = [:]
         for rule in byID.values where !rule.deleted {
-            if let existing = newestByKey[rule.key], existing.updatedAt >= rule.updatedAt { continue }
-            newestByKey[rule.key] = rule
+            let identity = Identity(key: rule.key, browser: rule.effectiveBrowser)
+            if let existing = newest[identity], existing.updatedAt >= rule.updatedAt { continue }
+            newest[identity] = rule
         }
-        for (id, rule) in byID where !rule.deleted && newestByKey[rule.key]?.id != id {
+        for (id, rule) in byID
+        where !rule.deleted && newest[Identity(key: rule.key, browser: rule.effectiveBrowser)]?.id != id {
             var tombstone = rule
             tombstone.deleted = true
             byID[id] = tombstone

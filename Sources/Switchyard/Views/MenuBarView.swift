@@ -94,19 +94,19 @@ struct MenuBarView: View {
 // MARK: - Shared bits
 
 private struct ProfilesOverrideKey: EnvironmentKey {
-    static let defaultValue: [DiaProfile]? = nil
+    static let defaultValue: [BrowserProfile]? = nil
 }
 
 extension EnvironmentValues {
     /// Stand-in profiles (with their colors) for snapshots; nil means Dia's real profiles.
-    var profilesOverride: [DiaProfile]? {
+    var profilesOverride: [BrowserProfile]? {
         get { self[ProfilesOverrideKey.self] }
         set { self[ProfilesOverrideKey.self] = newValue }
     }
 }
 
 struct ProfileChip: View {
-    @EnvironmentObject private var monitor: DiaProfilesMonitor
+    @EnvironmentObject private var monitor: ProfilesMonitor
     @Environment(\.profilesOverride) private var profilesOverride
     let name: String
 
@@ -185,7 +185,7 @@ struct RecentView: View {
 
 struct RecentRow: View {
     @EnvironmentObject private var router: Router
-    @EnvironmentObject private var profiles: DiaProfilesMonitor
+    @EnvironmentObject private var profiles: ProfilesMonitor
     @EnvironmentObject private var rules: RuleStore
     let record: RoutingRecord
 
@@ -324,7 +324,7 @@ struct AppRuleSuggestionBanner: View {
 struct RulesView: View {
     @EnvironmentObject private var rules: RuleStore
     @EnvironmentObject private var usage: RuleUsageStore
-    @EnvironmentObject private var profiles: DiaProfilesMonitor
+    @EnvironmentObject private var profiles: ProfilesMonitor
     @EnvironmentObject private var settings: AppSettings
 
     @State private var query = ""
@@ -332,7 +332,7 @@ struct RulesView: View {
     @State private var newProfile = ""
 
     var body: some View {
-        let live = rules.ruleSet.liveRules
+        let live = rules.browserRules
         let rows = RuleListing.arrange(rules: live, usage: usage.usage, query: query, profile: profileFilter)
         let addCandidate = RuleListing.addCandidate(for: query, existing: live)
         let counts = Dictionary(grouping: live, by: { $0.profileName.lowercased() }).mapValues(\.count)
@@ -435,7 +435,7 @@ struct RulesView: View {
     }
 
     private func emptyMessage(hasCandidate: Bool) -> String {
-        if rules.ruleSet.liveRules.isEmpty {
+        if rules.browserRules.isEmpty {
             return "No rules yet. Jev creates them as you click links, and corrections from Recent save them too."
         }
         if hasCandidate { return "No rule for that yet. Add it above." }
@@ -469,7 +469,7 @@ struct RulesView: View {
 
 struct RuleRow: View {
     @EnvironmentObject private var rules: RuleStore
-    @EnvironmentObject private var profiles: DiaProfilesMonitor
+    @EnvironmentObject private var profiles: ProfilesMonitor
     let row: RuleListing.Row
 
     private var rule: Rule { row.rule }

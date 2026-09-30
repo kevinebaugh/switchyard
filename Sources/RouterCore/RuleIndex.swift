@@ -12,10 +12,11 @@ public struct RuleIndex: Sendable {
     private let rulesByHost: [String: [Rule]]
     private let appRules: [String: Rule]
 
-    public init(rules: [Rule]) {
+    /// Only `browser`'s rules take part; the others belong to a browser that isn't in use.
+    public init(rules: [Rule], browser: BrowserKind = .dia) {
         var rulesByHost: [String: [Rule]] = [:]
         var appRules: [String: Rule] = [:]
-        for rule in rules where !rule.deleted {
+        for rule in rules where !rule.deleted && rule.effectiveBrowser == browser {
             if rule.key.isAppRule, let sourceApp = rule.sourceApp {
                 let id = sourceApp.bundleID.lowercased()
                 if let existing = appRules[id], existing.updatedAt >= rule.updatedAt { continue }

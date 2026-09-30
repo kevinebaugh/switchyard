@@ -4,9 +4,20 @@
 
 # Switchyard
 
-**Every link on the right track in Dia.**
+**Every link on the right track in your browser.**
 
-Switchyard is a macOS menu-bar app that opens every link in the right [Dia](https://www.diabrowser.com/) profile, and learns as it goes.
+Switchyard is a macOS menu-bar app that opens every link in the right browser profile, and learns as it goes. It works with [Dia](https://www.diabrowser.com/) and [Chrome](https://www.google.com/chrome/), and should work with Brave, Edge and Vivaldi.
+
+## Browsers
+
+| Browser | Opens links via | Setup asks for | Status |
+| --- | --- | --- | --- |
+| Dia | Dia's AppleScript dictionary (Dia ignores Chromium's profile flag) | Automation permission for Dia | Supported |
+| Chrome | `--profile-directory`, handed to the running Chrome | Access to Chrome's data folder, to read its profiles | Supported |
+| Brave, Edge, Vivaldi | Same as Chrome | Same as Chrome | Should work; not yet tested |
+| Safari | Safari's scripting has no way to choose a profile | | Not possible today |
+
+You pick one browser during setup. Rules remember which browser they're for, so switching browsers later won't mix them up.
 
 Inspired by [jdsimcoe/dia-router](https://github.com/jdsimcoe/dia-router). Instead of hand-written rules, links that no rule covers are decided by **Jev**, [TypeSafe](https://typesafe.ai)'s System One model: typed answers with calibrated confidence in roughly 70–500 ms. Confident answers turn into local rules, so the same kind of link never asks Jev again.
 
@@ -20,7 +31,7 @@ Inspired by [jdsimcoe/dia-router](https://github.com/jdsimcoe/dia-router). Inste
    - an identifying query parameter (`mail.google.com ?authuser=…`)
 3. **App rules.** A rule like "links from Slack → Work" routes every link clicked in that app. It beats rules Jev learned, but rules you made or corrected still win.
 4. **Otherwise, Jev.** One request asks two questions in parallel:
-   - Which profile should open this link? The options are your Dia profiles, described in Settings.
+   - Which profile should open this link? The options are your browser's profiles, described in Settings.
    - Which part of the URL identifies the account? The answers are domain, subdomain, first path segment, query identifier, or "can't generalize".
    - Only the host, the first three path segments and the *names* of any query parameters are sent. Query values and fragments stay on your Mac, so a rule like `mail.google.com ?authuser=…` keeps its value and is matched locally.
 5. **Decide.** What happens depends on Jev's confidence:
@@ -31,9 +42,9 @@ Inspired by [jdsimcoe/dia-router](https://github.com/jdsimcoe/dia-router). Inste
    | Lower confidence | Open in Jev's top pick; nothing is saved, and the row is flagged ⚠︎ |
    | No key, timeout (1.2 s), offline, or an error | Open in the fallback profile (**Personal**) and show the reason |
 
-6. Dia opens the link through its AppleScript dictionary: it makes a new tab in the chosen profile and focuses it. This needs no Accessibility permission and no keyboard-shortcut setup.
+6. The browser opens the link in the chosen profile. Dia is asked through its AppleScript dictionary; Chrome and friends get `--profile-directory`, which the running browser picks up. Neither needs Accessibility permission or keyboard shortcuts.
 
-Dia is the source of truth for profiles: they're read from Dia's `Local State`, and renames are followed automatically.
+The browser is the source of truth for profiles: they're read from its `Local State`, and renames are followed automatically.
 
 ## Menu bar
 
@@ -58,20 +69,20 @@ Dia is the source of truth for profiles: they're read from Dia's `Local State`, 
 Only for loud events:
 - **Fallbacks**, e.g. "Jev was too slow · app.foo.com → Personal".
 - **Optionally**, low-confidence routings, e.g. "Jev wasn't sure · app.foo.com → Personal · 0.61".
-- **Setup problems**: missing or invalid key, Dia missing, or Automation denied.
+- **Setup problems**: missing or invalid key, the browser missing, or its permission denied.
 
 Routing notifications offer **Personal was right**, which saves a rule for that link without re-opening it. They also offer **Should be …** for each other profile, which re-opens the link there and saves the rule. Either way, the next link like it opens instantly. Routing notifications are limited to one every 5 minutes.
 
 ## Syncing rules between Macs
 
 Rules live in `rules.json` in a folder you choose: **iCloud Drive** (the default when it's enabled), **Dropbox**, or **this Mac only**.
-- Rules name profiles by *name*, not by Dia's directory, so they work on a Mac where the directories differ.
+- Rules name profiles by *name* (and browser), not by the browser's folder, so they work on a Mac where the folders differ.
 - Every write merges with what's on disk: the newer edit wins, and deletions are tombstones. Two Macs editing at once don't lose or resurrect rules.
 - History and the API key stay local.
 
 ## Build and install
 
-Requires macOS 14+, Xcode (or the Command Line Tools), and Dia.
+Requires macOS 14+, Xcode (or the Command Line Tools), and one of the browsers above.
 
 ```sh
 swift test
@@ -79,12 +90,15 @@ swift test
 ```
 
 On first launch, a setup window walks you through the steps:
-1. You allow Switchyard to send commands to Dia. This is macOS's Automation permission, not Accessibility: it covers Dia only. It's a one-time prompt, and it also lets Switchyard list your profiles in Dia's order. The step is skipped if it's already allowed.
-2. It finds your Dia profiles.
-3. You connect Jev with your TypeSafe API key ([console.typesafe.ai/keys](https://console.typesafe.ai/keys)). The key is checked when you continue.
-4. Switchyard drafts a description of each profile from the sites it uses most, read locally from Dia's history, and you edit them. A profile without enough history is left blank rather than guessed.
-5. You make Switchyard the default browser. This is the one step you can put off ("Not yet").
-6. You choose login, notification and rules-sync options.
+1. You pick your browser.
+2. You give Switchyard the one permission that browser needs (skipped if it's already allowed):
+   - **Dia:** Automation, so Switchyard can ask Dia to open tabs and list profiles in Dia's order. It covers Dia only; it isn't Accessibility.
+   - **Chrome and friends:** access to the browser's data folder, which macOS protects, so Switchyard can read the profile list (and, on this Mac only, what each profile uses most). Opening links needs nothing extra.
+3. It finds your profiles.
+4. You connect Jev with your TypeSafe API key ([console.typesafe.ai/keys](https://console.typesafe.ai/keys)). The key is checked when you continue.
+5. Switchyard drafts a description of each profile from the sites it uses most (and, in Chrome, the account it's signed in to), read locally from the browser's history, and you edit them. A profile without enough history is left blank rather than guessed.
+6. You make Switchyard the default browser. This is the one step you can put off ("Not yet").
+7. You choose login, notification and rules-sync options.
 
 If you close the window partway, the menu offers to finish setup later.
 
@@ -149,13 +163,13 @@ build/Switchyard.noindex/Switchyard.app/Contents/MacOS/Switchyard --snapshot-onb
   - Jev wire types
   - decision policy
   - sync merge
-  - Dia `Local State` parsing
+  - Chromium `Local State` parsing and the browser table
 - `Sources/Switchyard`: the app.
   - Apple Event URL handler
   - Jev client (hard deadline, keep-warm connection)
-  - Dia AppleScript launcher
+  - browser adapters: Dia via AppleScript, Chrome and friends via `--profile-directory`
   - stores, notifications, SwiftUI menu
 
 ## License
 
-MIT; see [LICENSE](LICENSE). Two small pieces are adapted from [jdsimcoe/dia-router](https://github.com/jdsimcoe/dia-router), also MIT; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Switchyard is an independent project, not affiliated with or endorsed by The Browser Company (Dia) or TypeSafe AI.
+MIT; see [LICENSE](LICENSE). Two small pieces are adapted from [jdsimcoe/dia-router](https://github.com/jdsimcoe/dia-router), also MIT; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Switchyard is an independent project, not affiliated with or endorsed by The Browser Company (Dia), Google (Chrome) or TypeSafe AI.
