@@ -108,11 +108,16 @@ extension EnvironmentValues {
 struct ProfileChip: View {
     @EnvironmentObject private var monitor: ProfilesMonitor
     @Environment(\.profilesOverride) private var profilesOverride
+    @Environment(\.colorScheme) private var colorScheme
     let name: String
 
     private static let palette: [Color] = [.blue, .orange, .purple, .green, .pink, .teal, .indigo, .brown]
 
-    /// Dia's profile color (0xAARRGGBB).
+    static func color(_ rgb: ProfileColor.RGB) -> Color {
+        Color(.sRGB, red: rgb.red, green: rgb.green, blue: rgb.blue)
+    }
+
+    /// The browser's profile color (0xAARRGGBB).
     static func color(argb: UInt32) -> Color {
         Color(
             .sRGB,
@@ -125,14 +130,18 @@ struct ProfileChip: View {
     var body: some View {
         let profiles = profilesOverride ?? monitor.profiles
         let index = profiles.firstIndex { $0.name.caseInsensitiveCompare(name) == .orderedSame }
-        let diaColor = index.flatMap { profiles[$0].colorARGB }.map(Self.color(argb:))
-        let color = diaColor ?? index.map { Self.palette[$0 % Self.palette.count] } ?? .gray
+        let argb = index.flatMap { profiles[$0].colorARGB }
+        let tint = argb.map(Self.color(argb:)) ?? index.map { Self.palette[$0 % Self.palette.count] } ?? .gray
+        // The browser's own color can be a pale pastel (Chrome themes); adjust it for the text.
+        let text = argb.map { Self.color(ProfileColor.readableText(argb: $0, dark: colorScheme == .dark)) } ?? tint
         Text(name)
             .font(.caption.weight(.semibold))
             .padding(.horizontal, 7)
             .padding(.vertical, 2)
-            .background(color.opacity(0.18), in: Capsule())
-            .foregroundStyle(color)
+            // In light mode, tint from the (possibly darkened) text color so pale profiles
+            // still get a visible pill; it's the same color as before for saturated ones.
+            .background(colorScheme == .dark ? tint.opacity(0.28) : text.opacity(0.18), in: Capsule())
+            .foregroundStyle(text)
             .opacity(index == nil ? 0.6 : 1)
     }
 }

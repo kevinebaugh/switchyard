@@ -11,7 +11,7 @@ enum Snapshots {
     static let profiles = [
         BrowserProfile(directory: "Profile 1", name: "Personal", colorARGB: 0xFFEDA900),
         BrowserProfile(directory: "Profile 2", name: "Work", colorARGB: 0xFF00B785),
-        BrowserProfile(directory: "Profile 3", name: "Test", colorARGB: 0xFF5F5AA2),
+        BrowserProfile(directory: "Profile 3", name: "Test", colorARGB: 0xFFFCE4EC),   // a pale Chrome-style pastel
     ]
 
     static func render(to directory: URL) {
