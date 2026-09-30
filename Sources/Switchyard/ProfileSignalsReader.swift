@@ -1,0 +1,90 @@
+import Foundation
+import RouterCore
+import SQLite3
+
+/// Reads, on this Mac only, what each Dia profile is signed in to and where it browses, so
+/// setup can draft profile descriptions. Nothing here leaves the Mac; only the descriptions
+/// the user keeps are sent to Jev.
+enum ProfileSignalsReader {
+    static let historyDays = 90
+
+    private static var userData: URL {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Application Support/Dia/User Data", isDirectory: true)
+    }
+
+    static func signals(for profiles: [DiaProfile]) -> [ProfileSignals] {
+        profiles.map { profile in
+            ProfileSignals(
+                name: profile.name,
+                accounts: accounts(for: profile),
+                siteVisits: ProfileDescriber.siteVisits(from: historyRows(directory: profile.directory))
+            )
+        }
+    }
+
+    // MARK: Accounts
+
+    private struct Preferences: Decodable {
+        struct Account: Decodable {
+            let email: String?
+            let hd: String?
+        }
+
+        let accountInfo: [Account]?
+
+        enum CodingKeys: String, CodingKey {
+            case accountInfo = "account_info"
+        }
+    }
+
+    private static func accounts(for profile: DiaProfile) -> [ProfileAccount] {
+        var accounts: [ProfileAccount] = profile.account.map { [$0] } ?? []
+        let url = userData.appendingPathComponent(profile.directory).appendingPathComponent("Preferences")
+        if let data = try? Data(contentsOf: url),
+           let preferences = try? JSONDecoder().decode(Preferences.self, from: data) {
+            for account in preferences.accountInfo ?? [] {
+                guard let email = account.email, !email.isEmpty else { continue }
+                accounts.append(ProfileAccount(email: email, workspaceDomain: account.hd))
+            }
+        }
+        var seen = Set<String>()
+        return accounts.filter { seen.insert($0.email.lowercased()).inserted }
+    }
+
+    // MARK: History
+
+    private static func historyRows(directory: String) -> [(url: String, visits: Int)] {
+        // Chromium timestamps are microseconds since 1601-01-01.
+        let cutoff = (Date().timeIntervalSince1970 - Double(historyDays) * 86_400 + 11_644_473_600) * 1_000_000
+        return query(directory: directory,
+                     sql: "SELECT url, visit_count FROM urls WHERE hidden = 0 AND last_visit_time > ?1",
+                     parameter: Int64(cutoff))
+    }
+
+    private static func query(directory: String, sql: String, parameter: Int64) -> [(url: String, visits: Int)] {
+        let file = userData.appendingPathComponent(directory).appendingPathComponent("History")
+        guard FileManager.default.fileExists(atPath: file.path) else { return [] }
+
+        // immutable=1: read Dia's live database without taking locks or touching its journal.
+        var database: OpaquePointer?
+        guard sqlite3_open_v2(file.absoluteString + "?immutable=1", &database,
+                              SQLITE_OPEN_READONLY | SQLITE_OPEN_URI, nil) == SQLITE_OK else {
+            sqlite3_close(database)
+            return []
+        }
+        defer { sqlite3_close(database) }
+
+        var statement: OpaquePointer?
+        guard sqlite3_prepare_v2(database, sql, -1, &statement, nil) == SQLITE_OK else { return [] }
+        defer { sqlite3_finalize(statement) }
+        sqlite3_bind_int64(statement, 1, parameter)
+
+        var rows: [(String, Int)] = []
+        while sqlite3_step(statement) == SQLITE_ROW {
+            guard let text = sqlite3_column_text(statement, 0) else { continue }
+            rows.append((String(cString: text), Int(sqlite3_column_int64(statement, 1))))
+        }
+        return rows
+    }
+}

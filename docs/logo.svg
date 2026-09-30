@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0.2" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="#3B2F8F"/>
+      <stop offset="0.55" stop-color="#1E1850"/>
+      <stop offset="1" stop-color="#0D0B24"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.68" cy="0.3" r="0.5">
+      <stop offset="0" stop-color="#FF7A59" stop-opacity="0.38"/>
+      <stop offset="1" stop-color="#FF7A59" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="dot" cx="0.38" cy="0.32" r="0.75">
+      <stop offset="0" stop-color="#FFD29A"/>
+      <stop offset="0.55" stop-color="#FF8A5B"/>
+      <stop offset="1" stop-color="#F0506E"/>
+    </radialGradient>
+    <linearGradient id="route" x1="0" y1="1" x2="0.6" y2="0">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#FFE3D3"/>
+    </linearGradient>
+    <filter id="soft" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="28"/>
+    </filter>
+    <clipPath id="squircle">
+      <rect x="100" y="100" width="824" height="824" rx="185" ry="185"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#squircle)">
+    <rect width="1024" height="1024" fill="url(#bg)"/>
+    <rect width="1024" height="1024" fill="url(#glow)"/>
+    <!-- other profiles -->
+    <g opacity="0.38" fill="none" stroke="#FFFFFF">
+      <path d="M512 590 C512 480 330 490 330 384 M512 590 L512 318" stroke-width="40" stroke-linecap="round"/>
+      <circle cx="330" cy="340" r="40" stroke-width="20"/>
+      <circle cx="512" cy="274" r="40" stroke-width="20"/>
+    </g>
+    <!-- the chosen route -->
+    <path d="M512 752 L512 590 C512 480 694 490 694 384" fill="none" stroke="url(#route)" stroke-width="46" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="512" cy="770" r="30" fill="#FFFFFF"/>
+    <circle cx="694" cy="340" r="64" fill="#FF7A59" opacity="0.7" filter="url(#soft)"/>
+    <circle cx="694" cy="340" r="52" fill="url(#dot)"/>
+  </g>
+</svg>
