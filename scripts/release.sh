@@ -5,21 +5,34 @@
 #   appcast.xml                the update feed (signed with the Sparkle key in your keychain);
 #                              upload all three to the GitHub release for v<version>
 #
-# Needs a "Developer ID Application" identity (see build-app.sh) and notarization
-# credentials stored once with:
+# Needs a "Developer ID Application" identity (see build-app.sh) and notarization credentials,
+# either (preferred, works from any shell or CI) an App Store Connect API key:
+#   SWITCHYARD_NOTARY_KEY_ID=… SWITCHYARD_NOTARY_ISSUER=… (e.g. in scripts/signing.local.zsh),
+#   with the key at ~/.appstoreconnect/private_keys/AuthKey_<key ID>.p8 (or SWITCHYARD_NOTARY_KEY)
+# or a keychain profile stored once with:
 #   xcrun notarytool store-credentials switchyard-notary --apple-id <Apple ID> --team-id <team ID>
-# (override the profile name with SWITCHYARD_NOTARY_PROFILE).
+#   (override the profile name with SWITCHYARD_NOTARY_PROFILE).
 set -euo pipefail
 
 project_root="${0:A:h:h}"
 app_name="Switchyard"
 app="$project_root/build/$app_name.noindex/$app_name.app"
 out="$project_root/build/release"
-profile="${SWITCHYARD_NOTARY_PROFILE:-switchyard-notary}"
+
+[[ -f "$project_root/scripts/signing.local.zsh" ]] && source "$project_root/scripts/signing.local.zsh"
+if [[ -n "${SWITCHYARD_NOTARY_KEY_ID:-}" && -n "${SWITCHYARD_NOTARY_ISSUER:-}" ]]; then
+    key="${SWITCHYARD_NOTARY_KEY:-$HOME/.appstoreconnect/private_keys/AuthKey_$SWITCHYARD_NOTARY_KEY_ID.p8}"
+    [[ -f "$key" ]] || { echo "No API key at $key" >&2; exit 1; }
+    notary_auth=(--key "$key" --key-id "$SWITCHYARD_NOTARY_KEY_ID" --issuer "$SWITCHYARD_NOTARY_ISSUER")
+else
+    notary_auth=(--keychain-profile "${SWITCHYARD_NOTARY_PROFILE:-switchyard-notary}")
+fi
 
 "$project_root/scripts/build-app.sh"
 
-if ! codesign -dv "$app" 2>&1 | grep -q "^Authority=Developer ID Application:"; then
+# Capture first: `codesign | grep -q` can fail under pipefail when grep exits early.
+signature="$(codesign -dvv "$app" 2>&1)"   # -dvv lists the certificate chain (Authority=…)
+if [[ "$signature" != *$'\n'"Authority=Developer ID Application:"* ]]; then
     echo "The app isn't signed with a Developer ID identity, so it can't be notarized." >&2
     echo "Create one in Xcode → Settings → Accounts → Manage Certificates, then run this again." >&2
     exit 1
@@ -32,12 +45,12 @@ if [[ -z "$public_key" ]]; then
     echo "Run \$(scripts/sparkle-tools.sh)/generate_keys and put the public key there." >&2
     exit 1
 fi
-identity="$(codesign -dv "$app" 2>&1 | sed -n 's/^Authority=\(Developer ID Application:.*\)/\1/p' | head -n 1)"
+identity="$(print -r -- "$signature" | sed -n 's/^Authority=\(Developer ID Application:.*\)/\1/p' | sed -n 1p)"
 rm -rf "$out" && mkdir -p "$out"
 
 notarize() {
     echo "Notarizing $(basename "$1")…"
-    xcrun notarytool submit "$1" --keychain-profile "$profile" --wait
+    xcrun notarytool submit "$1" "${notary_auth[@]}" --wait
 }
 
 # 1. Notarize the app itself and staple the ticket, so it verifies offline.
