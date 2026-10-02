@@ -10,8 +10,12 @@ final class Router: ObservableObject {
     static let shared = Router()
 
     @Published private(set) var status = "Ready"
-    /// Fallbacks and low-confidence routings since the menu was last opened.
+    /// Links routed since the menu was last opened that still need a look (a fallback or an
+    /// unsure pick nobody has confirmed or moved yet). Drives the menu-bar badge, and agrees
+    /// with the orange rows in Recent.
     @Published private(set) var attentionCount = 0
+    /// Opening the menu counts as having seen everything routed before it.
+    private var acknowledgedAt = Date()
     /// "Your last 3 links from Slack opened in Work…" shown at the top of Recent.
     @Published private(set) var appRuleSuggestion: AppRuleSuggestion.Suggestion?
 
@@ -73,7 +77,8 @@ final class Router: ObservableObject {
     }
 
     func menuOpened() {
-        attentionCount = 0
+        acknowledgedAt = Date()
+        refreshAttention()
         profiles.refresh()
         Task { await profiles.refreshVisibleOrder(using: browser) }
         rules.reloadIfChangedOnDisk()
@@ -139,9 +144,9 @@ final class Router: ObservableObject {
         }
         history.add(record)
         refreshSuggestion()
+        refreshAttention()
 
         if record.decision.needsAttention {
-            attentionCount += 1
             notifier.notify(about: record)
         }
     }
@@ -243,6 +248,7 @@ final class Router: ObservableObject {
             if let savedRuleID { $0.learnedRuleID = savedRuleID }
         }
         refreshSuggestion()
+        refreshAttention()
         status = key.map { "Saved: \($0.label) → \(profileName)" } ?? "Opened in \(profileName)"
     }
 
@@ -254,6 +260,13 @@ final class Router: ObservableObject {
     func openAgain(recordID: UUID) async {
         guard let record = history.record(id: recordID) else { return }
         _ = await open(record.url, in: record.finalProfileName)
+    }
+
+    private func refreshAttention() {
+        let count = history.records.filter { record in
+            record.date > acknowledgedAt && RoutingExplanation.explain(record, rule: rules.rule(id:)).needsAttention
+        }.count
+        if count != attentionCount { attentionCount = count }
     }
 
     // MARK: App-rule suggestions
