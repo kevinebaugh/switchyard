@@ -9,7 +9,7 @@ lsregister="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchS
 
 "$project_root/scripts/build-app.sh"
 
-osascript -e "tell application id \"dev.kev.Switchyard\" to quit" 2>/dev/null || true
+osascript -e "tell application id \"com.kevinebaugh.switchyard\" to quit" 2>/dev/null || true
 sleep 0.5
 pkill -x "$app_name" 2>/dev/null || true
 

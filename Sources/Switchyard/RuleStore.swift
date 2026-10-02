@@ -2,7 +2,7 @@ import Foundation
 import os
 import RouterCore
 
-private let log = Logger(subsystem: "dev.kev.Switchyard", category: "rules")
+private let log = Logger(subsystem: "com.kevinebaugh.switchyard", category: "rules")
 
 /// Rules live in a JSON file in the sync folder (iCloud Drive / Dropbox / local).
 /// Every write re-reads the file and merges first, so edits from another Mac aren't lost.

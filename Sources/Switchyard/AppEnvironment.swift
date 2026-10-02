@@ -24,7 +24,7 @@ enum AppEnvironment {
     /// Isolated storage: rehearsals and snapshots never touch real state.
     static var isIsolated: Bool { isRehearsal || isSnapshot }
 
-    private static let isolatedSuiteName = "dev.kev.Switchyard.rehearsal"
+    private static let isolatedSuiteName = "com.kevinebaugh.switchyard.rehearsal"
 
     nonisolated(unsafe) static let defaults: UserDefaults = isIsolated
         ? UserDefaults(suiteName: isolatedSuiteName)!

@@ -9,7 +9,7 @@
     <key>CFBundleExecutable</key>
     <string>Switchyard</string>
     <key>CFBundleIdentifier</key>
-    <string>dev.kev.Switchyard</string>
+    <string>com.kevinebaugh.switchyard</string>
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
     <key>CFBundleIconName</key>
@@ -21,7 +21,7 @@
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.1.0</string>
+    <string>0.9.0</string>
     <key>CFBundleVersion</key>
     <string>1</string>
     <key>CFBundleURLTypes</key>
@@ -51,11 +51,13 @@
     <key>LSApplicationCategoryType</key>
     <string>public.app-category.utilities</string>
     <key>LSMinimumSystemVersion</key>
-    <string>14.0</string>
+    <string>26.0</string>
     <key>LSUIElement</key>
     <true/>
     <key>NSAppleEventsUsageDescription</key>
     <string>Switchyard asks Dia to open each link in the right profile.</string>
+    <key>NSHumanReadableCopyright</key>
+    <string>© 2026 Kevin Ebaugh. MIT License.</string>
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>NSPrincipalClass</key>

@@ -2,7 +2,7 @@ import AppKit
 import os
 import RouterCore
 
-private let log = Logger(subsystem: "dev.kev.Switchyard", category: "router")
+private let log = Logger(subsystem: "com.kevinebaugh.switchyard", category: "router")
 
 /// rule → Jev → open → record → learn.
 @MainActor

@@ -3,7 +3,7 @@ import Security
 
 /// The TypeSafe API key, stored as a generic password in the login keychain.
 enum Keychain {
-    private static let service = "dev.kev.Switchyard"
+    private static let service = "com.kevinebaugh.switchyard"
     private static var account: String { AppEnvironment.keychainAccount }
 
     private static var baseQuery: [String: Any] {

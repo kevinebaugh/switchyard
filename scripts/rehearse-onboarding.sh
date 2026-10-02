@@ -8,7 +8,7 @@
 set -euo pipefail
 
 app="/Applications/Switchyard.app"
-bundle_id="dev.kev.Switchyard"
+bundle_id="com.kevinebaugh.switchyard"
 reset_permission=false
 
 for arg in "$@"; do

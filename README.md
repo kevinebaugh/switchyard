@@ -82,7 +82,7 @@ Rules live in `rules.json` in a folder you choose: **iCloud Drive** (the default
 
 ## Build and install
 
-Requires macOS 14+, Xcode (or the Command Line Tools), and one of the browsers above.
+Requires macOS 26 or later, one of the browsers above, and a [TypeSafe](https://typesafe.ai) API key for Jev. Building from source needs Xcode (or the Command Line Tools).
 
 ```sh
 swift test
@@ -117,6 +117,8 @@ Jev knows only what your descriptions say, so they're the most important setting
 | Test | A throwaway account used to try products as a new user: sign-up flows, OAuth into third-party services. |
 
 Setup drafts these for you (see above). A profile added later starts with a generic description if it's named `Work`, `Personal` or `Test`, and empty otherwise. Descriptions are stored on your Mac, not in the rules file.
+
+`./scripts/release.sh` builds a notarized DMG and zip for a release (it needs a Developer ID identity and stored notarization credentials; see the script's header).
 
 Without an Apple Development signing identity the app is ad-hoc signed. macOS may ask again for Automation and Keychain access after each rebuild. To use a stable identity, put `export SWITCHYARD_SIGNING_IDENTITY='Apple Development: …'` in `scripts/signing.local.zsh` (gitignored).
 

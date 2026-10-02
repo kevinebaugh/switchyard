@@ -153,7 +153,11 @@ struct SettingsView: View {
                         launchAtLogin = LoginItem.isEnabled
                     }
                 ))
-                Button("Run Setup Again…") { OnboardingWindow.shared.show() }
+                HStack {
+                    Button("Run Setup Again…") { OnboardingWindow.shared.show() }
+                    Spacer()
+                    Button("About Switchyard") { AboutPanel.show() }
+                }
                 Toggle("Notify on fallbacks and errors", isOn: $settings.notificationsEnabled)
                 Toggle("Also notify when Jev is unsure", isOn: $settings.notifyLowConfidence)
                     .disabled(!settings.notificationsEnabled)
