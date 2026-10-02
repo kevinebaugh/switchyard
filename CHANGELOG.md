@@ -2,9 +2,10 @@
 
 All notable changes to Switchyard. Versions follow [Semantic Versioning](https://semver.org).
 
-## [Unreleased]
+## [0.9.2] - 2026-10-02
 
-- An occasional, one-time support reminder: every 50 links, at most weekly, as a card in Recent and a quiet notification. Pay what you want once (1% goes to carbon removal), or click "I've already supported", and it stops for good.
+- An occasional, one-time support reminder: every 50 links (at most weekly, never in your first week), as a card in Recent and a quiet notification. Routing is never affected.
+- Pay what you want, once ($10 suggested; 1% goes to carbon removal). After checkout, Switchyard turns the reminders off on its own. "I've already supported" does the same.
 - Settings has a Support section.
 
 ## [0.9.1] - 2026-10-02
