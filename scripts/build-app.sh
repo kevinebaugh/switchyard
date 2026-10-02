@@ -44,10 +44,12 @@ version="$(git -C "$project_root" describe --tags --abbrev=0 --match 'v[0-9]*' 2
 build_number="$(git -C "$project_root" rev-list --count HEAD 2>/dev/null || echo 1)"
 
 swift build --package-path "$project_root" -c release
+bin_dir="$(swift build --package-path "$project_root" -c release --show-bin-path)"
 
 rm -rf "$project_root/build/$app_name.app" "$app_bundle"   # also clears the old, indexed location
-mkdir -p "$contents/MacOS" "$contents/Resources"
-cp "$project_root/.build/release/Switchyard" "$contents/MacOS/$app_name"
+mkdir -p "$contents/MacOS" "$contents/Resources" "$contents/Frameworks"
+cp "$bin_dir/Switchyard" "$contents/MacOS/$app_name"
+ditto "$bin_dir/Sparkle.framework" "$contents/Frameworks/Sparkle.framework"   # in-app updates
 cp "$project_root/Resources/Info.plist" "$contents/Info.plist"
 [[ -n "$version" ]] && "$plist_buddy" -c "Set :CFBundleShortVersionString $version" "$contents/Info.plist"
 "$plist_buddy" -c "Set :CFBundleVersion $build_number" "$contents/Info.plist"
@@ -70,18 +72,28 @@ entitlements="$project_root/Resources/Switchyard.entitlements"
 case "$signing_identity" in
     "Developer ID Application:"*)
         # Release signing: hardened runtime + secure timestamp, both required for notarization.
-        codesign --force --options runtime --timestamp --entitlements "$entitlements" --sign "$signing_identity" "$app_bundle"
-        ;;
+        sign_flags=(--force --options runtime --timestamp --sign "$signing_identity") ;;
     "")
         # Hardened runtime here too, so local builds behave like releases (e.g. Apple Events
         # only work because of the entitlement).
-        codesign --force --options runtime --entitlements "$entitlements" --sign - "$app_bundle"
-        echo "Ad-hoc signed. macOS will re-ask for Automation/Keychain access after each rebuild."
-        ;;
+        sign_flags=(--force --options runtime --sign -) ;;
     *)
-        codesign --force --options runtime --timestamp=none --entitlements "$entitlements" --sign "$signing_identity" "$app_bundle"
-        ;;
+        sign_flags=(--force --options runtime --timestamp=none --sign "$signing_identity") ;;
 esac
-[[ -n "$signing_identity" ]] && echo "Signed with $signing_identity"
+
+# Sign inside-out, as Sparkle documents: its helpers, then the framework, then the app.
+sparkle="$contents/Frameworks/Sparkle.framework/Versions/B"
+codesign "${sign_flags[@]}" "$sparkle/XPCServices/Installer.xpc"
+codesign "${sign_flags[@]}" --preserve-metadata=entitlements "$sparkle/XPCServices/Downloader.xpc"
+codesign "${sign_flags[@]}" "$sparkle/Autoupdate"
+codesign "${sign_flags[@]}" "$sparkle/Updater.app"
+codesign "${sign_flags[@]}" "$contents/Frameworks/Sparkle.framework"
+codesign "${sign_flags[@]}" --entitlements "$entitlements" "$app_bundle"
+
+if [[ -n "$signing_identity" ]]; then
+    echo "Signed with $signing_identity"
+else
+    echo "Ad-hoc signed. macOS will re-ask for Automation/Keychain access after each rebuild."
+fi
 
 echo "Built $app_name $version ($build_number): $app_bundle"

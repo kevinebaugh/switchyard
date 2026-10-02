@@ -56,6 +56,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         Router.shared.start()
+        Updates.shared.start()
         if !AppSettings.shared.onboardingCompleted {
             OnboardingWindow.shared.show()
         } else {

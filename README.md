@@ -73,6 +73,10 @@ Only for loud events:
 
 Routing notifications offer **Personal was right**, which saves a rule for that link without re-opening it. They also offer **Should be …** for each other profile, which re-opens the link there and saves the rule. Either way, the next link like it opens instantly. Routing notifications are limited to one every 5 minutes.
 
+## Updates
+
+Switchyard updates itself with [Sparkle](https://sparkle-project.org). It checks daily, which you can turn off in **Settings → Updates**; **Check for Updates…** is there too. Every update is signed, and Switchyard only installs ones signed with its own key. Your rules, settings and permissions carry over, and updates never re-run setup.
+
 ## Syncing rules between Macs
 
 Rules live in `rules.json` in a folder you choose: **iCloud Drive** (the default when it's enabled), **Dropbox**, or **this Mac only**.
@@ -118,7 +122,7 @@ Jev knows only what your descriptions say, so they're the most important setting
 
 Setup drafts these for you (see above). A profile added later starts with a generic description if it's named `Work`, `Personal` or `Test`, and empty otherwise. Descriptions are stored on your Mac, not in the rules file.
 
-`./scripts/release.sh` builds a notarized DMG and zip for a release (it needs a Developer ID identity and stored notarization credentials; see the script's header).
+`./scripts/release.sh` builds a notarized DMG, a zip and the update feed (`appcast.xml`) for a release (it needs a Developer ID identity and stored notarization credentials; see the script's header).
 
 Without an Apple Development signing identity the app is ad-hoc signed. macOS may ask again for Automation and Keychain access after each rebuild. To use a stable identity, put `export SWITCHYARD_SIGNING_IDENTITY='Apple Development: …'` in `scripts/signing.local.zsh` (gitignored).
 

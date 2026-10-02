@@ -10,6 +10,10 @@ let package = Package(
     products: [
         .executable(name: "Switchyard", targets: ["Switchyard"]),
     ],
+    dependencies: [
+        // In-app updates. Keep in step with scripts/sparkle-tools.sh.
+        .package(url: "https://github.com/sparkle-project/Sparkle", exact: "2.10.0"),
+    ],
     targets: [
         // Pure routing logic: rules, matching, Jev request/response, decisions, sync merge.
         .target(
@@ -19,8 +23,13 @@ let package = Package(
         // The menu-bar app: AppKit/SwiftUI, Dia automation, networking, persistence.
         .executableTarget(
             name: "Switchyard",
-            dependencies: ["RouterCore"],
-            path: "Sources/Switchyard"
+            dependencies: [
+                "RouterCore",
+                .product(name: "Sparkle", package: "Sparkle"),
+            ],
+            path: "Sources/Switchyard",
+            // Sparkle.framework is embedded in Contents/Frameworks by scripts/build-app.sh.
+            linkerSettings: [.unsafeFlags(["-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks"])]
         ),
         .testTarget(
             name: "RouterCoreTests",

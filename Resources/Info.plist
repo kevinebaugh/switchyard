@@ -56,6 +56,12 @@
     <true/>
     <key>NSAppleEventsUsageDescription</key>
     <string>Switchyard asks Dia to open each link in the right profile.</string>
+    <key>SUFeedURL</key>
+    <string>https://github.com/kevinebaugh/switchyard/releases/latest/download/appcast.xml</string>
+    <key>SUPublicEDKey</key>
+    <string></string>
+    <key>SUEnableAutomaticChecks</key>
+    <true/>
     <key>NSHumanReadableCopyright</key>
     <string>© 2026 Kevin Ebaugh. MIT License.</string>
     <key>NSHighResolutionCapable</key>

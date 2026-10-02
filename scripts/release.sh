@@ -2,6 +2,8 @@
 # Builds, notarizes and packages a release into build/release/:
 #   Switchyard-<version>.dmg   drag-to-Applications disk image (notarized, stapled)
 #   Switchyard-<version>.zip   the stapled app, for the updater and Homebrew
+#   appcast.xml                the update feed (signed with the Sparkle key in your keychain);
+#                              upload all three to the GitHub release for v<version>
 #
 # Needs a "Developer ID Application" identity (see build-app.sh) and notarization
 # credentials stored once with:
@@ -24,6 +26,12 @@ if ! codesign -dv "$app" 2>&1 | grep -q "^Authority=Developer ID Application:"; 
 fi
 
 version="$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$app/Contents/Info.plist")"
+public_key="$(/usr/libexec/PlistBuddy -c "Print :SUPublicEDKey" "$app/Contents/Info.plist" 2>/dev/null || true)"
+if [[ -z "$public_key" ]]; then
+    echo "SUPublicEDKey is empty in Resources/Info.plist, so this build couldn't verify its own updates." >&2
+    echo "Run \$(scripts/sparkle-tools.sh)/generate_keys and put the public key there." >&2
+    exit 1
+fi
 identity="$(codesign -dv "$app" 2>&1 | sed -n 's/^Authority=\(Developer ID Application:.*\)/\1/p' | head -n 1)"
 rm -rf "$out" && mkdir -p "$out"
 
@@ -54,7 +62,28 @@ xcrun stapler staple "$dmg"
 zip="$out/$app_name-$version.zip"
 ditto -c -k --keepParent "$app" "$zip"
 
+# 4. Update feed. Release notes come from this version's CHANGELOG.md section.
+feed="$out/feed"
+mkdir -p "$feed"
+cp "$zip" "$feed/"
+python3 - "$project_root/CHANGELOG.md" "$version" > "$feed/$app_name-$version.html" <<'PY'
+import html, re, sys
+text = open(sys.argv[1]).read()
+match = re.search(rf"^## \[{re.escape(sys.argv[2])}\].*?\n(.*?)(?=^## |\Z)", text, re.S | re.M)
+lines = [l.strip() for l in (match.group(1) if match else "").splitlines() if l.strip()]
+paragraphs = [f"<p>{html.escape(l)}</p>" for l in lines if not l.startswith("- ")]
+items = [f"<li>{html.escape(l[2:])}</li>" for l in lines if l.startswith("- ")]
+print("\n".join(paragraphs) + (f"\n<ul>{''.join(items)}</ul>" if items else ""))
+PY
+sparkle_bin="$("$project_root/scripts/sparkle-tools.sh")"
+"$sparkle_bin/generate_appcast" \
+    --download-url-prefix "https://github.com/kevinebaugh/switchyard/releases/download/v$version/" \
+    --embed-release-notes \
+    -o "$out/appcast.xml" "$feed"
+rm -rf "$feed"
+
 spctl --assess --type open --context context:primary-signature -v "$dmg"
 echo
 echo "Release $version ready in $out:"
-(cd "$out" && shasum -a 256 *.dmg *.zip)
+(cd "$out" && shasum -a 256 *.dmg *.zip && ls appcast.xml)
+echo "Next: create the GitHub release v$version and attach the DMG, zip and appcast.xml."

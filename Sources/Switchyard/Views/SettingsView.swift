@@ -7,6 +7,7 @@ struct SettingsView: View {
     @EnvironmentObject private var rules: RuleStore
     @EnvironmentObject private var profiles: ProfilesMonitor
     @EnvironmentObject private var settings: AppSettings
+    @ObservedObject private var updates = Updates.shared
 
     @State private var apiKeyDraft = ""
     @State private var testURL = "https://app.shortcut.com/acme/story/1"
@@ -158,6 +159,21 @@ struct SettingsView: View {
                     Spacer()
                     Button("About Switchyard") { AboutPanel.show() }
                 }
+            }
+
+            Section {
+                LabeledContent("Version", value: Self.versionString)
+                if updates.isAvailable {
+                    Toggle("Check for updates automatically", isOn: $updates.automaticallyChecks)
+                    Button("Check for Updates…", action: updates.checkForUpdates)
+                        .disabled(!updates.canCheck)
+                } else {
+                    Text("Updates are off in this build (it isn't set up for releases).")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            } header: {
+                Text("Updates")
                 Toggle("Notify on fallbacks and errors", isOn: $settings.notificationsEnabled)
                 Toggle("Also notify when Jev is unsure", isOn: $settings.notifyLowConfidence)
                     .disabled(!settings.notificationsEnabled)
@@ -171,6 +187,13 @@ struct SettingsView: View {
             isDefaultBrowser = DefaultBrowser.isDefault
             launchAtLogin = LoginItem.isEnabled
         }
+    }
+
+    static var versionString: String {
+        let info = Bundle.main.infoDictionary ?? [:]
+        let version = info["CFBundleShortVersionString"] as? String ?? "?"
+        let build = info["CFBundleVersion"] as? String ?? "?"
+        return "\(version) (\(build))"
     }
 
     private func saveKey() {
