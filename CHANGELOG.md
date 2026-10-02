@@ -2,6 +2,10 @@
 
 All notable changes to Switchyard. Versions follow [Semantic Versioning](https://semver.org).
 
+## [0.9.1] - 2026-10-02
+
+- The About window shows the licenses as readable text instead of raw Markdown.
+
 ## [0.9.0] - 2026-10-02
 
 The first public release.
