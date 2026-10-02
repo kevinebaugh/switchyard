@@ -2,7 +2,7 @@
 
 All notable changes to Switchyard. Versions follow [Semantic Versioning](https://semver.org).
 
-## [0.9.0] - Unreleased
+## [0.9.0] - 2026-10-02
 
 The first public release.
 

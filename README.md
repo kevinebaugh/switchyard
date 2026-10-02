@@ -84,7 +84,18 @@ Rules live in `rules.json` in a folder you choose: **iCloud Drive** (the default
 - Every write merges with what's on disk: the newer edit wins, and deletions are tombstones. Two Macs editing at once don't lose or resurrect rules.
 - History and the API key stay local.
 
-## Build and install
+## Install
+
+1. Download **Switchyard-x.y.z.dmg** from the [latest release](https://github.com/kevinebaugh/switchyard/releases/latest).
+2. Open it and drag **Switchyard** to Applications.
+3. Open Switchyard. Setup walks you through the rest. You'll need:
+   - macOS 26 or later on an Apple silicon Mac
+   - one of the browsers above
+   - a [TypeSafe](https://typesafe.ai) API key for Jev
+
+Switchyard is signed and notarized by Apple, and it updates itself (see [Updates](#updates)).
+
+## Build from source
 
 Requires macOS 26 or later, one of the browsers above, and a [TypeSafe](https://typesafe.ai) API key for Jev. Building from source needs Xcode (or the Command Line Tools).
 
