@@ -159,6 +159,7 @@ extension RoutingRecord {
 struct RecentView: View {
     @EnvironmentObject private var history: HistoryStore
     @EnvironmentObject private var router: Router
+    @ObservedObject private var support = SupportReminder.shared
 
     var body: some View {
         if history.records.isEmpty {
@@ -178,6 +179,10 @@ struct RecentView: View {
         } else {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
+                    if support.isShowingCard {
+                        SupportCard()
+                        Divider()
+                    }
                     if let suggestion = router.appRuleSuggestion {
                         AppRuleSuggestionBanner(suggestion: suggestion)
                         Divider()
@@ -325,6 +330,50 @@ struct AppRuleSuggestionBanner: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 9)
         .background(.yellow.opacity(0.08))
+    }
+}
+
+/// The occasional, one-time support reminder (see `SupportReminder`).
+struct SupportCard: View {
+    @ObservedObject private var support = SupportReminder.shared
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "heart.fill")
+                .foregroundStyle(.pink)
+                .padding(.top, 2)
+            VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(support.routedSummary)
+                        .font(.callout.weight(.medium))
+                    Text("It's free and open source. If it saves you from wrong-profile tabs, support it once, pay what you want, and these reminders stop.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Label {
+                    Text(SupportReminder.climateNote).foregroundStyle(.secondary)
+                } icon: {
+                    Image(systemName: "leaf.fill").foregroundStyle(.green)
+                }
+                .font(.caption2)
+                HStack(spacing: 8) {
+                    Button("I've already supported") { support.markSupported() }
+                        .buttonStyle(.link)
+                        .font(.caption)
+                    Spacer()
+                    Button("Not now") { support.notNow() }
+                        .controlSize(.small)
+                    Button("Support…") { support.openCheckout() }
+                        .controlSize(.small)
+                        .buttonStyle(.borderedProminent)
+                        .tint(.pink)
+                }
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(.pink.opacity(0.06))
     }
 }
 

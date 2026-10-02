@@ -2,6 +2,11 @@
 
 All notable changes to Switchyard. Versions follow [Semantic Versioning](https://semver.org).
 
+## [Unreleased]
+
+- An occasional, one-time support reminder: every 50 links, at most weekly, as a card in Recent and a quiet notification. Pay what you want once (1% goes to carbon removal), or click "I've already supported", and it stops for good.
+- Settings has a Support section.
+
 ## [0.9.1] - 2026-10-02
 
 - The About window shows the licenses as readable text instead of raw Markdown.

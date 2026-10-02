@@ -95,6 +95,12 @@ final class Router: ObservableObject {
     /// Entry point for every link macOS hands us.
     func handleIncoming(_ incoming: URL, source: SourceApp?) {
         if incoming.scheme?.lowercased() == "switchyard" {
+            // The checkout's "after payment" redirect.
+            if incoming.host?.lowercased() == "supported" {
+                SupportReminder.shared.markSupported()
+                status = "Thank you for supporting Switchyard ♥"
+                return
+            }
             guard let components = URLComponents(url: incoming, resolvingAgainstBaseURL: false),
                   let value = components.queryItems?.first(where: { $0.name == "url" })?.value,
                   let url = URL(string: value) else {
@@ -149,6 +155,7 @@ final class Router: ObservableObject {
         if record.decision.needsAttention {
             notifier.notify(about: record)
         }
+        SupportReminder.shared.linkRouted()
     }
 
     /// The routing decision without side effects (other than calling Jev). Also used by "Test URL".

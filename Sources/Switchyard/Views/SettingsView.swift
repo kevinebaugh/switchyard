@@ -8,6 +8,7 @@ struct SettingsView: View {
     @EnvironmentObject private var profiles: ProfilesMonitor
     @EnvironmentObject private var settings: AppSettings
     @ObservedObject private var updates = Updates.shared
+    @ObservedObject private var support = SupportReminder.shared
 
     @State private var apiKeyDraft = ""
     @State private var testURL = "https://app.shortcut.com/acme/story/1"
@@ -158,6 +159,32 @@ struct SettingsView: View {
                     Button("Run Setup Again…") { OnboardingWindow.shared.show() }
                     Spacer()
                     Button("About Switchyard") { AboutPanel.show() }
+                }
+            }
+
+            if support.isEnabled {
+                Section("Support") {
+                    if support.isSupporter {
+                        Label("Thank you for supporting Switchyard.", systemImage: "heart.fill")
+                            .foregroundStyle(.pink)
+                    } else {
+                        HStack {
+                            Text("Free and open source. Pay what you want, once.")
+                            Spacer()
+                            Button("Support…") { support.openCheckout() }
+                        }
+                        HStack {
+                            Label {
+                                Text(SupportReminder.climateNote).foregroundStyle(.secondary)
+                            } icon: {
+                                Image(systemName: "leaf.fill").foregroundStyle(.green)
+                            }
+                            Spacer()
+                            Button("I've already supported") { support.markSupported() }
+                                .buttonStyle(.link)
+                        }
+                        .font(.caption)
+                    }
                 }
             }
 

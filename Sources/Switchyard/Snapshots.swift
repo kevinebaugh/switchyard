@@ -18,6 +18,7 @@ enum Snapshots {
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         renderRecent(to: directory)
         renderRules(to: directory)
+        renderSupport(to: directory)
 
         for step in OnboardingModel.Step.allCases {
             for variant in variants(for: step) {
@@ -137,6 +138,13 @@ enum Snapshots {
         default:
             [Variant()]
         }
+    }
+
+    /// The support reminder card at the top of Recent.
+    static func renderSupport(to directory: URL) {
+        SupportReminder.shared.showForSnapshot(routedLinks: 1_250)
+        let card = SupportCard().frame(width: 460)
+        writeBothAppearances(card, size: NSSize(width: 460, height: 130), to: directory, name: "menu-support")
     }
 
     /// `<name>-light.png` and `<name>-dark.png`, with the made-up profiles.

@@ -11,6 +11,8 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     private static let fallbackInterval: TimeInterval = 5 * 60
     private static let setupInterval: TimeInterval = 60 * 60
     nonisolated private static let actionPrefix = "profile:"
+    nonisolated private static let supportCategory = "support"
+    nonisolated private static let supportAction = "support.open"
 
     private var center: UNUserNotificationCenter { .current() }
     private var lastRoutingNotification = Date.distantPast
@@ -39,7 +41,12 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
             }
             return UNNotificationCategory(identifier: "routing.\(opened)", actions: [confirm] + moves, intentIdentifiers: [])
         }
-        center.setNotificationCategories(Set(categories))
+        let support = UNNotificationCategory(
+            identifier: Self.supportCategory,
+            actions: [UNNotificationAction(identifier: Self.supportAction, title: "Support…")],
+            intentIdentifiers: []
+        )
+        center.setNotificationCategories(Set(categories + [support]))
     }
 
     func notify(about record: RoutingRecord) {
@@ -89,6 +96,18 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         center.add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
     }
 
+    /// The support reminder: quiet (no sound), and clicking it opens the checkout. Not gated on
+    /// "Notify on fallbacks and errors", which is about routing; turning notifications off for
+    /// Switchyard in System Settings still silences it.
+    func notifySupport(routedLinks: Int) {
+        registerCategories(for: ProfilesMonitor.shared.names)
+        let content = UNMutableNotificationContent()
+        content.title = "Switchyard has routed \(routedLinks.formatted()) links for you"
+        content.body = "Support it once, pay what you want, and the reminders stop. \(SupportReminder.climateNote)"
+        content.categoryIdentifier = Self.supportCategory
+        center.add(UNNotificationRequest(identifier: "support", content: content, trigger: nil))
+    }
+
     nonisolated func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification
@@ -101,6 +120,12 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         didReceive response: UNNotificationResponse
     ) async {
         let action = response.actionIdentifier
+        if response.notification.request.content.categoryIdentifier == Self.supportCategory {
+            if action == Self.supportAction || action == UNNotificationDefaultActionIdentifier {
+                await SupportReminder.shared.openCheckout()
+            }
+            return
+        }
         guard action.hasPrefix(Self.actionPrefix),
               let idString = response.notification.request.content.userInfo["recordID"] as? String,
               let recordID = UUID(uuidString: idString) else { return }

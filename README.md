@@ -166,6 +166,7 @@ build/Switchyard.noindex/Switchyard.app/Contents/MacOS/Switchyard --snapshot-onb
   - the name of the app the link came from
   - your profile names and descriptions
 - Full URLs appear only in local history.
+- The support reminder counts routed links on your Mac; the count is never sent anywhere.
 
 ## Icon
 
@@ -186,6 +187,12 @@ build/Switchyard.noindex/Switchyard.app/Contents/MacOS/Switchyard --snapshot-onb
   - Jev client (hard deadline, keep-warm connection)
   - browser adapters: Dia via AppleScript, Chrome and friends via `--profile-directory`
   - stores, notifications, SwiftUI menu
+
+## Support
+
+Switchyard is free and open source. If it saves you from wrong-profile tabs, you can [support it once](https://buy.stripe.com/6oU8wR2sC1eJcLT4tW0ZW00), paying what you want ($10 suggested). 1% goes to removing carbon from the atmosphere through Stripe Climate.
+
+Every 50 links, at most once a week, Switchyard shows a small card in Recent and a quiet notification asking for support. Paying, or clicking "I've already supported", stops them for good. Routing is never affected.
 
 ## License
 
