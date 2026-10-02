@@ -2,14 +2,63 @@ import Foundation
 
 /// The synced rules file. Merge-friendly: rules are identified by `id`, the newer
 /// `updatedAt` wins, and deletions are tombstones so they survive a concurrent edit.
+///
+/// Several versions of Switchyard can share one file (say, a Mac that hasn't updated yet), so
+/// reading is forgiving and writing is careful: a version only writes a file it fully understood.
 public struct RuleSet: Codable, Equatable, Sendable {
     public static let tombstoneLifetime: TimeInterval = 30 * 24 * 60 * 60
 
-    public var version = 1
+    /// Bump whenever the file's format changes (new fields, new values), so older versions
+    /// know to leave it alone. 2 = rules carry a `browser`.
+    public static let currentVersion = 2
+
+    public var version = RuleSet.currentVersion
     public var rules: [Rule]
+    /// Rules in the file this version couldn't read (from a newer format). They're never
+    /// written back, which is why a file with any of them is read-only.
+    public private(set) var unreadableRuleCount = 0
 
     public init(rules: [Rule] = []) {
         self.rules = rules
+    }
+
+    /// Whether writing this file back would lose nothing: it's from this format or older,
+    /// and every rule in it was understood.
+    public var isSafeToWrite: Bool {
+        version <= Self.currentVersion && unreadableRuleCount == 0
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case version, rules
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        version = try container.decodeIfPresent(Int.self, forKey: .version) ?? 1
+        rules = []
+        guard container.contains(.rules) else { return }
+
+        // One rule this version can't read mustn't take the rest of the file with it.
+        var list = try container.nestedUnkeyedContainer(forKey: .rules)
+        while !list.isAtEnd {
+            if let rule = try? list.decode(Rule.self) {
+                rules.append(rule)
+            } else {
+                _ = try list.decode(Skip.self)
+                unreadableRuleCount += 1
+            }
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(Self.currentVersion, forKey: .version)
+        try container.encode(rules, forKey: .rules)
+    }
+
+    /// Consumes one array element without reading it.
+    private struct Skip: Decodable {
+        init(from decoder: Decoder) {}
     }
 
     public var liveRules: [Rule] {

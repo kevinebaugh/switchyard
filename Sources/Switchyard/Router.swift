@@ -249,7 +249,11 @@ final class Router: ObservableObject {
         }
         refreshSuggestion()
         refreshAttention()
-        status = key.map { "Saved: \($0.label) → \(profileName)" } ?? "Opened in \(profileName)"
+        if key != nil, let reason = rules.readOnlyReason {
+            status = "Not saved: \(reason)"
+        } else {
+            status = key.map { "Saved: \($0.label) → \(profileName)" } ?? "Opened in \(profileName)"
+        }
     }
 
     func correct(recordID: UUID, to profileName: String) async {

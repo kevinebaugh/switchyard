@@ -12,6 +12,9 @@ final class RuleStore: ObservableObject {
 
     @Published private(set) var ruleSet = RuleSet()
     @Published private(set) var lastError: String?
+    /// Set when the rules file can't be safely written by this version (saved by a newer
+    /// Switchyard, or unreadable). Rules still route; changes aren't saved.
+    @Published private(set) var readOnlyReason: String?
     private(set) var index = RuleIndex(rules: [])
     private var rulesByID: [UUID: Rule] = [:]
     private(set) var location: RulesLocation
@@ -50,8 +53,10 @@ final class RuleStore: ObservableObject {
         let disk = readDisk()
         let merged = RuleSet.merge(ruleSet, disk)
         apply(merged)
-        if merged != disk { write(merged) }
+        if readOnlyReason == nil, merged != disk { write(merged) }
     }
+
+    var isReadOnly: Bool { readOnlyReason != nil }
 
     // MARK: Mutations
 
@@ -101,6 +106,9 @@ final class RuleStore: ObservableObject {
     private func mutate<T>(_ body: (inout RuleSet) -> T) -> T {
         var set = RuleSet.merge(ruleSet, readDisk())
         let result = body(&set)
+        // Never write a file this version didn't fully understand: that would drop whatever
+        // a newer Switchyard (on another Mac) added.
+        guard readOnlyReason == nil else { return result }
         apply(set)
         write(set)
         return result
@@ -136,21 +144,31 @@ final class RuleStore: ObservableObject {
         (try? FileManager.default.attributesOfItem(atPath: fileURL.path))?[.modificationDate] as? Date
     }
 
+    /// Read the file and decide whether this version may write it back.
     private func readDisk() -> RuleSet {
         var result = RuleSet()
+        var readOnly: String?
         var coordinationError: NSError?
         NSFileCoordinator(filePresenter: presenter).coordinate(
             readingItemAt: fileURL, options: [], error: &coordinationError
         ) { url in
-            guard let data = try? Data(contentsOf: url) else { return }
+            // No file yet is a fresh start, not a problem.
+            guard FileManager.default.fileExists(atPath: url.path) else { return }
             do {
-                result = try Self.decoder.decode(RuleSet.self, from: data)
-                lastError = nil
+                result = try Self.decoder.decode(RuleSet.self, from: Data(contentsOf: url))
+                if !result.isSafeToWrite {
+                    readOnly = "These rules were saved by a newer Switchyard. Update Switchyard on this Mac to change them."
+                }
             } catch {
-                lastError = "Couldn't read \(url.lastPathComponent): \(error.localizedDescription)"
-                log.error("Couldn't decode rules: \(error.localizedDescription, privacy: .public)")
+                // Unreadable or damaged: never overwrite it with what little we know.
+                readOnly = "Couldn't read \(url.lastPathComponent), so changes aren't being saved. (\(error.localizedDescription))"
+                log.error("Couldn't read rules: \(error.localizedDescription, privacy: .public)")
             }
         }
+        if let coordinationError {
+            readOnly = "Couldn't read the rules file: \(coordinationError.localizedDescription)"
+        }
+        if readOnly != readOnlyReason { readOnlyReason = readOnly }
         lastModified = modificationDate()
         return result
     }

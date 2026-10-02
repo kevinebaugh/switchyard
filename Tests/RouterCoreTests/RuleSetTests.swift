@@ -141,3 +141,47 @@ import Testing
         #expect(RuleKey.parse("", includeSubdomains: true) == nil)
     }
 }
+
+@Suite struct RuleFileCompatibilityTests {
+    let decoder: JSONDecoder = {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return decoder
+    }()
+
+    func rule(_ host: String, extra: String = "") -> String {
+        """
+        {"id":"\(UUID().uuidString)","host":"\(host)","hostMatch":"domain","profileName":"Work",
+         "origin":"learned","updatedAt":"2026-10-01T12:00:00Z","deleted":false\(extra)}
+        """
+    }
+
+    @Test func versionlessFilesAreOldAndWritable() throws {
+        let set = try decoder.decode(RuleSet.self, from: Data(#"{"rules":[\#(rule("a.com"))]}"#.utf8))
+        #expect(set.version == 1)
+        #expect(set.rules.count == 1)
+        #expect(set.isSafeToWrite)
+    }
+
+    @Test func aNewerFormatIsReadButNotWritable() throws {
+        let set = try decoder.decode(RuleSet.self, from: Data(#"{"version":99,"rules":[\#(rule("a.com"))]}"#.utf8))
+        #expect(set.rules.map(\.host) == ["a.com"])
+        #expect(!set.isSafeToWrite)
+    }
+
+    @Test func oneUnreadableRuleDoesNotSpoilTheRest() throws {
+        let json = #"{"version":2,"rules":[\#(rule("a.com")),\#(rule("b.com", extra: #","browser":"netscape""#)),\#(rule("c.com"))]}"#
+        let set = try decoder.decode(RuleSet.self, from: Data(json.utf8))
+        #expect(set.rules.map(\.host) == ["a.com", "c.com"])
+        #expect(set.unreadableRuleCount == 1)
+        #expect(!set.isSafeToWrite)
+    }
+
+    @Test func writingUsesTheCurrentVersion() throws {
+        var set = RuleSet()
+        set.upsert(key: RuleKey(host: "a.com", hostMatch: .domain), profileName: "Work", origin: .manual)
+        let object = try JSONSerialization.jsonObject(with: JSONEncoder().encode(set)) as? [String: Any]
+        #expect(object?["version"] as? Int == RuleSet.currentVersion)
+        #expect(object?["unreadableRuleCount"] == nil)
+    }
+}

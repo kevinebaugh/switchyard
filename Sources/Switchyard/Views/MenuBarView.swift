@@ -377,6 +377,18 @@ struct RulesView: View {
 
             Divider()
 
+            if let reason = rules.readOnlyReason {
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "lock.fill").foregroundStyle(.orange)
+                    Text(reason).font(.caption).fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Color.orange.opacity(0.1))
+                Divider()
+            }
+
             if let candidate = addCandidate {
                 HStack(spacing: 8) {
                     Image(systemName: "plus.circle.fill").foregroundStyle(Color.accentColor)
@@ -393,6 +405,7 @@ struct RulesView: View {
                     Spacer()
                     Button("Add") { add(candidate) }
                         .keyboardShortcut(.defaultAction)
+                        .disabled(rules.isReadOnly)
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 7)
@@ -512,6 +525,7 @@ struct RuleRow: View {
             }
             .labelsHidden()
             .frame(width: 100)
+            .disabled(rules.isReadOnly)
             Button {
                 rules.delete(id: rule.id)
             } label: {
@@ -519,6 +533,7 @@ struct RuleRow: View {
             }
             .buttonStyle(.borderless)
             .help("Delete rule")
+            .disabled(rules.isReadOnly)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 5)
