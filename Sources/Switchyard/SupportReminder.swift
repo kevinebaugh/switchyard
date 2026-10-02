@@ -10,8 +10,8 @@ final class SupportReminder: ObservableObject {
     static let shared = SupportReminder()
 
     /// The pay-what-you-want Stripe Payment Link (Managed Payments, $10 suggested, $5 minimum).
-    /// Stripe only redirects to http(s), so its confirmation page points people to "I've already
-    /// supported"; `switchyard://supported` does the same for a future thank-you page. Nil turns reminders off.
+    /// After payment it redirects to docs/thanks (on GitHub Pages) with `?session_id=`, which
+    /// opens `switchyard://supported?session=…` to mark this Mac as a supporter. Nil turns reminders off.
     static let checkoutURL: URL? = URL(string: "https://buy.stripe.com/6oU8wR2sC1eJcLT4tW0ZW00")
     /// Payments made through Stripe Climate put 1% toward carbon removal.
     static let climateNote = "1% goes to removing carbon from the atmosphere."
@@ -57,8 +57,10 @@ final class SupportReminder: ObservableObject {
         isShowingCard = false
     }
 
-    /// From `switchyard://supported` (the checkout's redirect) or "I've already supported".
-    func markSupported() {
+    /// From `switchyard://supported?session=…` (the thank-you page) or "I've already supported".
+    /// The session ID is kept only as a local record of the payment.
+    func markSupported(checkoutSession: String? = nil) {
+        if let checkoutSession { defaults.set(checkoutSession, forKey: "supportCheckoutSession") }
         isSupporter = true
         isShowingCard = false
     }

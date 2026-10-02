@@ -34,4 +34,13 @@ import Testing
         #expect(!SupportNudge.isDue(state, isSupporter: true, now: start + 365 * day))
         #expect(SupportNudge.isDue(state, isSupporter: false, now: start + 365 * day))
     }
+
+    @Test func checkoutSessionIDs() {
+        #expect(SupportNudge.isCheckoutSessionID("cs_live_a1" + String(repeating: "B2c3", count: 14)))
+        #expect(!SupportNudge.isCheckoutSessionID(""))
+        #expect(!SupportNudge.isCheckoutSessionID("cs_live_short"))
+        #expect(!SupportNudge.isCheckoutSessionID("cs_test_a1" + String(repeating: "B2c3", count: 14)))
+        #expect(!SupportNudge.isCheckoutSessionID("cs_live_" + String(repeating: "x", count: 40) + "&evil=1"))
+        #expect(!SupportNudge.isCheckoutSessionID("{CHECKOUT_SESSION_ID}"))
+    }
 }

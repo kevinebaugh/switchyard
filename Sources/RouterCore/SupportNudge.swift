@@ -35,6 +35,17 @@ public enum SupportNudge {
         return isDue(state, isSupporter: isSupporter, now: now)
     }
 
+    /// Whether `id` looks like a live Stripe Checkout Session ID (`cs_live_` + a long
+    /// alphanumeric tail), as the thank-you page passes along after a real payment. The app can't
+    /// verify it with Stripe (that needs a secret key), so this only keeps a bare
+    /// `switchyard://supported` from counting.
+    public static func isCheckoutSessionID(_ id: String) -> Bool {
+        let prefix = "cs_live_"
+        guard id.hasPrefix(prefix) else { return false }
+        let tail = id.dropFirst(prefix.count)
+        return tail.count >= 40 && tail.allSatisfy { $0.isASCII && ($0.isLetter || $0.isNumber) }
+    }
+
     public static func markShown(_ state: inout State, now: Date = Date()) {
         state.lastShownAtCount = state.routedLinks
         state.lastShownDate = now

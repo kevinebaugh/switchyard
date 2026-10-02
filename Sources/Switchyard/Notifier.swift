@@ -108,6 +108,15 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         center.add(UNNotificationRequest(identifier: "support", content: content, trigger: nil))
     }
 
+    /// Confirmation after the checkout's thank-you page hands back to the app.
+    func notifyThanks() {
+        let content = UNMutableNotificationContent()
+        content.title = "Thank you for supporting Switchyard ♥"
+        content.body = "Reminders are off on this Mac."
+        center.removeDeliveredNotifications(withIdentifiers: ["support"])
+        center.add(UNNotificationRequest(identifier: "support.thanks", content: content, trigger: nil))
+    }
+
     nonisolated func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification

@@ -95,9 +95,17 @@ final class Router: ObservableObject {
     /// Entry point for every link macOS hands us.
     func handleIncoming(_ incoming: URL, source: SourceApp?) {
         if incoming.scheme?.lowercased() == "switchyard" {
-            // The checkout's "after payment" redirect.
+            // From the thank-you page the checkout redirects to (docs/thanks), carrying the
+            // Stripe Checkout Session ID.
             if incoming.host?.lowercased() == "supported" {
-                SupportReminder.shared.markSupported()
+                let session = URLComponents(url: incoming, resolvingAgainstBaseURL: false)?
+                    .queryItems?.first(where: { $0.name == "session" })?.value ?? ""
+                guard SupportNudge.isCheckoutSessionID(session) else {
+                    status = "Ignored switchyard://supported without a checkout session"
+                    return
+                }
+                SupportReminder.shared.markSupported(checkoutSession: session)
+                notifier.notifyThanks()
                 status = "Thank you for supporting Switchyard ♥"
                 return
             }
