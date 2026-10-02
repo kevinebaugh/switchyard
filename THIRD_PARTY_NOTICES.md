@@ -4,7 +4,7 @@ Switchyard is inspired by [jdsimcoe/dia-router](https://github.com/jdsimcoe/dia-
 
 | Switchyard file | Adapted from | What |
 | --- | --- | --- |
-| `Sources/RouterCore/DiaLocalState.swift` | `Sources/DiaRouter/DiaProfileState.swift` | Decoding Dia's Chromium `Local State` file (the `info_cache` structure and file path) and sorting the profiles it lists |
+| `Sources/RouterCore/ChromiumLocalState.swift` | `Sources/DiaRouter/DiaProfileState.swift` | Decoding Dia's Chromium `Local State` file (the `info_cache` structure and file path) and sorting the profiles it lists |
 | `scripts/build-app.sh` | `scripts/build-app.sh` | Automatically finding an Apple Development signing identity, the `signing.local.zsh` override, and the fallback to ad-hoc signing |
 
 Those portions are used under the following license:
