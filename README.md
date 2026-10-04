@@ -6,7 +6,13 @@
 
 **Every link on the right track in your browser.**
 
-Switchyard is a macOS menu-bar app that opens every link in the right browser profile, and learns as it goes. It works with [Dia](https://www.diabrowser.com/) and [Chrome](https://www.google.com/chrome/), and should work with Brave, Edge and Vivaldi.
+Switchyard is a macOS menu-bar app that opens every link in the right browser profile: work links in your work profile, personal links in your personal one. It works with [Dia](https://www.diabrowser.com/) and [Chrome](https://www.google.com/chrome/), and should work with Brave, Edge and Vivaldi.
+
+Most links are routed by rules on your Mac, instantly and without going online. When a link matches no rule, Switchyard asks [Jev](https://typesafe.ai/blog/introducing-system-one-models-and-jev), a fast AI model from [TypeSafe](https://typesafe.ai). Instead of writing text, Jev picks one answer from a fixed list and says how sure it is. You write a sentence about what each profile is for, and for a link like `app.shortcut.com/acme/story/12` Jev answers something like "Work, 92% sure" in a fraction of a second. Sure answers usually become rules, so the same kind of link doesn't need to ask again. Unsure ones are flagged in the menu, where one click moves the link to the right profile and can save a rule.
+
+Jev needs a TypeSafe API key. Without one, Switchyard still follows your rules, and opens other links in a fallback profile you choose.
+
+Inspired by [jdsimcoe/dia-router](https://github.com/jdsimcoe/dia-router), which routes links with hand-written rules.
 
 ## Browsers
 
@@ -19,8 +25,6 @@ Switchyard is a macOS menu-bar app that opens every link in the right browser pr
 
 You pick one browser during setup. Rules remember which browser they're for, so switching browsers later won't mix them up.
 
-Inspired by [jdsimcoe/dia-router](https://github.com/jdsimcoe/dia-router). Instead of hand-written rules, links that no rule covers are decided by **Jev**, [TypeSafe](https://typesafe.ai)'s System One model: typed answers with calibrated confidence in roughly 70–500 ms. Confident answers turn into local rules, so the same kind of link never asks Jev again.
-
 ## How a link is routed
 
 1. Switchyard is the default browser, so macOS hands it every `http`/`https` link.
@@ -30,7 +34,7 @@ Inspired by [jdsimcoe/dia-router](https://github.com/jdsimcoe/dia-router). Inste
    - a path prefix (`app.shortcut.com/acme`)
    - an identifying query parameter (`mail.google.com ?authuser=…`)
 3. **App rules.** A rule like "links from Slack → Work" routes every link clicked in that app. It beats rules Jev learned, but rules you made or corrected still win.
-4. **Otherwise, Jev.** One request asks two questions in parallel:
+4. **Otherwise, ask Jev.** One request, usually answered in 70–500 ms, asks two questions at once:
    - Which profile should open this link? The options are your browser's profiles, described in Settings.
    - Which part of the URL identifies the account? The answers are domain, subdomain, first path segment, query identifier, or "can't generalize".
    - Only the host, the first three path segments and the *names* of any query parameters are sent. Query values and fragments stay on your Mac, so a rule like `mail.google.com ?authuser=…` keeps its value and is matched locally.
