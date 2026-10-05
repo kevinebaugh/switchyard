@@ -14,8 +14,10 @@ final class JevClient: Sendable {
 
     init() {
         let configuration = URLSessionConfiguration.ephemeral
-        configuration.timeoutIntervalForRequest = 2
-        configuration.timeoutIntervalForResource = 5
+        // The real limit is the per-call deadline in `ask` (1.2 s for live links, longer for
+        // catch-up); this only has to be longer than any of them.
+        configuration.timeoutIntervalForRequest = 6
+        configuration.timeoutIntervalForResource = 8
         configuration.waitsForConnectivity = false
         configuration.urlCache = nil
         configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
@@ -40,6 +42,7 @@ final class JevClient: Sendable {
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(body)
+        request.timeoutInterval = Double(deadline.components.seconds) + 1
 
         let session = session
         let finalRequest = request
