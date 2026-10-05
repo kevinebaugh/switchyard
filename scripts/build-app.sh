@@ -43,8 +43,11 @@ fi
 version="$(git -C "$project_root" describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null | sed 's/^v//' || true)"
 build_number="$(git -C "$project_root" rev-list --count HEAD 2>/dev/null || echo 1)"
 
-swift build --package-path "$project_root" -c release
-bin_dir="$(swift build --package-path "$project_root" -c release --show-bin-path)"
+# Universal: Apple silicon and Intel (the last Intel Macs run macOS 26). Sparkle's framework is
+# already universal.
+build_flags=(--package-path "$project_root" -c release --arch arm64 --arch x86_64)
+swift build "${build_flags[@]}"
+bin_dir="$(swift build "${build_flags[@]}" --show-bin-path)"
 
 rm -rf "$project_root/build/$app_name.app" "$app_bundle"   # also clears the old, indexed location
 mkdir -p "$contents/MacOS" "$contents/Resources" "$contents/Frameworks"
@@ -96,4 +99,4 @@ else
     echo "Ad-hoc signed. macOS will re-ask for Automation/Keychain access after each rebuild."
 fi
 
-echo "Built $app_name $version ($build_number): $app_bundle"
+echo "Built $app_name $version ($build_number), $(lipo -archs "$contents/MacOS/$app_name"): $app_bundle"
