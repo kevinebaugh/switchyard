@@ -41,6 +41,9 @@ public enum RoutingExplanation {
             }
             return Line(text: "Jev unsure (\(format(confidence))) · nothing saved", needsAttention: true)
 
+        case let .fallback(reason) where reason.isNetworkFailure:
+            return network(reason, record: record, saved: saved, savedOrigin: record.learnedRuleID.flatMap(rule)?.origin)
+
         case let .fallback(reason):
             if let saved {
                 return Line(text: "Fallback: \(reason.label) · you saved \(saved)", needsAttention: false)
@@ -50,6 +53,34 @@ public enum RoutingExplanation {
         case .explicit:
             return Line(text: "Opened in a named profile", needsAttention: false)
         }
+    }
+
+    /// A link that opened in the fallback profile because Jev couldn't be reached, before and
+    /// after catching up. Not flagged while waiting (there's nothing to do yet), nor once Jev
+    /// agrees; flagged when Jev says it belonged elsewhere or isn't sure.
+    private static func network(_ reason: FallbackReason, record: RoutingRecord, saved: String?, savedOrigin: RuleOrigin?) -> Line {
+        let what = switch reason {
+        case .offline: "Opened offline"
+        case .unreachable: "Couldn't reach Jev"
+        default: "Jev timed out"
+        }
+        if let saved, savedOrigin != .learned {
+            return Line(text: "\(what) · you saved \(saved)", needsAttention: false)
+        }
+        guard let catchUp = record.catchUp else {
+            let later = reason == .offline ? "Jev will check it later" : "will check it later"
+            return Line(text: "\(what) · \(later)", needsAttention: false)
+        }
+        let learned = saved.map { " · learned \($0)" } ?? ""
+        let confidence = format(catchUp.confidence)
+        guard catchUp.isConfident else {
+            return Line(text: "\(what) · Jev unsure (\(confidence))", needsAttention: true)
+        }
+        if catchUp.profileName.caseInsensitiveCompare(record.profileName) == .orderedSame {
+            return Line(text: "\(what) · Jev agrees (\(confidence))\(learned)", needsAttention: false)
+        }
+        // The row's "Move to …" button sits next to this, so it stays short; moving saves the rule.
+        return Line(text: "\(what) · Jev says \(catchUp.profileName) (\(confidence))", needsAttention: true)
     }
 
     private static func jev(_ confidence: Double) -> String {

@@ -23,10 +23,15 @@ final class JevClient: Sendable {
     }
 
     /// Open (or keep open) the TLS connection so the next real request skips the handshake.
-    func prewarm() async {
+    /// Doubles as the reachability check: true if Jev's server answered at all (any HTTP status
+    /// over verified HTTPS means the network gets through).
+    @discardableResult
+    func prewarm() async -> Bool {
         var request = URLRequest(url: URL(string: "https://api.typesafe.ai/")!)
         request.httpMethod = "HEAD"
-        _ = try? await session.data(for: request)
+        request.timeoutInterval = 3
+        guard let (_, response) = try? await session.data(for: request) else { return false }
+        return response is HTTPURLResponse
     }
 
     func ask(_ body: Jev.Request, apiKey: String, deadline: Duration = JevClient.deadline) async throws -> Jev.Response {
@@ -58,7 +63,7 @@ final class JevClient: Sendable {
         do {
             (data, response) = try await session.data(for: request)
         } catch let error as URLError {
-            throw JevFailure(reason: reason(for: error))
+            throw JevFailure(reason: FallbackReason(urlErrorCode: error.code))
         } catch is CancellationError {
             throw JevFailure(reason: .timeout)
         }
@@ -81,18 +86,6 @@ final class JevClient: Sendable {
             return try JSONDecoder().decode(Jev.Response.self, from: data)
         } catch {
             throw JevFailure(reason: .invalidResponse)
-        }
-    }
-
-    private static func reason(for error: URLError) -> FallbackReason {
-        switch error.code {
-        case .timedOut, .cancelled:
-            .timeout
-        case .notConnectedToInternet, .networkConnectionLost, .cannotFindHost, .cannotConnectToHost,
-             .dnsLookupFailed, .internationalRoamingOff, .dataNotAllowed, .secureConnectionFailed:
-            .offline
-        default:
-            .http(error.errorCode)
         }
     }
 }

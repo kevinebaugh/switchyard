@@ -221,6 +221,8 @@ struct RecentRow: View {
                 HStack(spacing: 4) {
                     if why.needsAttention {
                         Image(systemName: "exclamationmark.triangle.fill").imageScale(.small)
+                    } else if record.isAwaitingCatchUp {
+                        Image(systemName: "wifi.slash").imageScale(.small)
                     }
                     Text(why.text)
                         .lineLimit(1)
@@ -248,6 +250,16 @@ struct RecentRow: View {
                 Image(systemName: "arrow.right")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
+            }
+            if record.correctedTo == nil, let suggestion = record.catchUp, suggestion.suggestsMove(from: record.profileName) {
+                Button("Move to \(suggestion.profileName)") {
+                    Task {
+                        await router.correct(recordID: record.id, to: suggestion.profileName,
+                                             key: router.suggestedCorrectionKey(for: record))
+                    }
+                }
+                .controlSize(.small)
+                .help("Re-open it in \(suggestion.profileName) and remember")
             }
             ProfileChip(name: currentProfile)
             Menu {

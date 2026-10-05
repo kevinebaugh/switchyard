@@ -13,6 +13,30 @@ public struct RoutingRecord: Codable, Identifiable, Hashable, Sendable {
     public var learnedRuleID: UUID?
     public var correctedTo: String?
     public var openError: String?
+    /// Jev's answer once it could be reached again, for a link that fell back because it couldn't.
+    public var catchUp: CatchUp?
+
+    public struct CatchUp: Codable, Hashable, Sendable {
+        public var profileName: String
+        public var confidence: Double
+        /// Confident enough to act on (the profile threshold at the time).
+        public var isConfident: Bool
+        public var scope: LinkScope?
+        public var date: Date
+
+        public init(profileName: String, confidence: Double, isConfident: Bool, scope: LinkScope?, date: Date = Date()) {
+            self.profileName = profileName
+            self.confidence = confidence
+            self.isConfident = isConfident
+            self.scope = scope
+            self.date = date
+        }
+
+        /// Jev is sure the link belonged in another profile than `openedIn`.
+        public func suggestsMove(from openedIn: String) -> Bool {
+            isConfident && profileName.caseInsensitiveCompare(openedIn) != .orderedSame
+        }
+    }
 
     public init(
         id: UUID = UUID(),
@@ -42,6 +66,12 @@ public struct RoutingRecord: Codable, Identifiable, Hashable, Sendable {
     public var source: SourceApp? {
         guard let sourceBundleID else { return nil }
         return SourceApp(bundleID: sourceBundleID, name: sourceApp ?? sourceBundleID)
+    }
+
+    /// Fell back because Jev couldn't be reached, and Jev hasn't been asked since.
+    public var isAwaitingCatchUp: Bool {
+        guard case let .fallback(reason) = decision, reason.isNetworkFailure else { return false }
+        return catchUp == nil && correctedTo == nil && learnedRuleID == nil
     }
 
     /// Where the link ended up after any correction.

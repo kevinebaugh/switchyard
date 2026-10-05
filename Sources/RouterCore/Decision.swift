@@ -3,7 +3,10 @@ import Foundation
 public enum FallbackReason: Codable, Hashable, Sendable {
     case noAPIKey
     case timeout
+    /// No network at all.
     case offline
+    /// A network, but it can't reach Jev (a captive portal, a dead hotspot, a recent failure).
+    case unreachable
     case unauthorized
     case rateLimited
     case overloaded
@@ -18,12 +21,39 @@ public enum FallbackReason: Codable, Hashable, Sendable {
         case .noAPIKey: "no API key"
         case .timeout: "Jev timed out"
         case .offline: "offline"
+        case .unreachable: "couldn't reach Jev"
         case .unauthorized: "API key rejected"
         case .rateLimited: "Jev rate-limited"
         case .overloaded: "Jev busy"
         case let .http(code): "Jev error \(code)"
         case .invalidResponse: "unreadable answer"
         case let .unknownProfile(name): "Jev picked unknown profile \(name)"
+        }
+    }
+
+    /// Jev couldn't be reached at all: worth retrying once the network recovers, and caught up on.
+    public var isNetworkFailure: Bool {
+        switch self {
+        case .timeout, .offline, .unreachable: true
+        default: false
+        }
+    }
+
+    /// How a failed request to Jev is reported. Certificate errors mean something between the Mac
+    /// and Jev intercepted HTTPS, which is what a captive portal does.
+    public init(urlErrorCode code: URLError.Code) {
+        switch code {
+        case .timedOut, .cancelled:
+            self = .timeout
+        case .notConnectedToInternet, .internationalRoamingOff, .dataNotAllowed, .callIsActive:
+            self = .offline
+        case .networkConnectionLost, .cannotFindHost, .cannotConnectToHost, .dnsLookupFailed,
+             .secureConnectionFailed, .serverCertificateUntrusted, .serverCertificateHasBadDate,
+             .serverCertificateNotYetValid, .serverCertificateHasUnknownRoot,
+             .clientCertificateRejected, .clientCertificateRequired, .redirectToNonExistentLocation:
+            self = .unreachable
+        default:
+            self = .http(code.rawValue)
         }
     }
 

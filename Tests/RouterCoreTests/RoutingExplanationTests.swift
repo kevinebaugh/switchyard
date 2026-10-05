@@ -35,8 +35,8 @@ import Testing
     @Test func unsureAndFallbackAskForAttentionUntilConfirmed() {
         #expect(RoutingExplanation.explain(record(.lowConfidence(confidence: 0.47)), rule: { _ in nil })
             == .init(text: "Jev unsure (0.47) · nothing saved", needsAttention: true))
-        #expect(RoutingExplanation.explain(record(.fallback(.timeout)), rule: { _ in nil })
-            == .init(text: "Fallback: Jev timed out", needsAttention: true))
+        #expect(RoutingExplanation.explain(record(.fallback(.rateLimited)), rule: { _ in nil })
+            == .init(text: "Fallback: Jev rate-limited", needsAttention: true))
 
         let confirmed = Rule(key: RuleKey(host: "game.example", hostMatch: .domain), profileName: "Work", origin: .corrected)
         let line = RoutingExplanation.explain(record(.lowConfidence(confidence: 0.47), learned: confirmed.id),

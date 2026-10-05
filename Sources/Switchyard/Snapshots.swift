@@ -46,6 +46,11 @@ enum Snapshots {
         let moved = rules.upsert(key: RuleKey(host: "shop.example", hostMatch: .domain), profileName: "Personal", origin: .corrected)
         let now = Date()
         func url(_ s: String) -> URL { URL(string: s)! }
+        let tracker = rules.upsert(key: RuleKey(host: "tracker.example.com", hostMatch: .exact, pathPrefix: "/acme"), profileName: "Work", origin: .learned)
+        var caughtUp = RoutingRecord(url: url("https://tracker.example.com/acme/issue/7"), date: now.addingTimeInterval(-3500),
+                                     profileName: "Personal", decision: .fallback(.offline), latencyMilliseconds: 0.2,
+                                     learnedRuleID: tracker.id)
+        caughtUp.catchUp = .init(profileName: "Work", confidence: 0.91, isConfident: true, scope: .firstPathSegment)
         let records = [
             RoutingRecord(url: url("https://app.example-bank.com/e/er"), date: now.addingTimeInterval(-16), profileName: "Work",
                           decision: .rule(id: appRule.id, label: appRule.key.label), latencyMilliseconds: 0.6, sourceApp: slack),
@@ -65,6 +70,9 @@ enum Snapshots {
                           decision: .lowConfidence(confidence: 0.61), latencyMilliseconds: 289),
             RoutingRecord(url: url("https://status.example.com"), date: now.addingTimeInterval(-3300), profileName: "Personal",
                           decision: .fallback(.timeout), latencyMilliseconds: 1201),
+            RoutingRecord(url: url("https://wifi.example-air.com/portal"), date: now.addingTimeInterval(-3400), profileName: "Personal",
+                          decision: .fallback(.unreachable), latencyMilliseconds: 0.3),
+            caughtUp,
         ]
         let list = VStack(spacing: 0) {
             ForEach(records) { record in
@@ -75,7 +83,7 @@ enum Snapshots {
         .frame(width: 460)
         .environmentObject(Router.shared)
         .environmentObject(rules)
-        writeBothAppearances(list, size: NSSize(width: 460, height: 420), to: directory, name: "menu-recent")
+        writeBothAppearances(list, size: NSSize(width: 460, height: 560), to: directory, name: "menu-recent")
     }
 
     /// The Rules tab with made-up rules and usage (call after renderRecent, which adds rules).

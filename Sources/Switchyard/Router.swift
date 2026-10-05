@@ -20,6 +20,10 @@ final class Router: ObservableObject {
     @Published private(set) var appRuleSuggestion: AppRuleSuggestion.Suggestion?
 
     let jev = JevClient()
+    private(set) lazy var connectivity = Connectivity(jev: jev)
+    /// One notification per stretch without Jev, on the first link it affects.
+    private var outageNotified = false
+    private var isCatchingUp = false
     /// The selected browser's adapter (Dia via AppleScript, Chrome & co. via their profile flag).
     var browser: BrowserAdapter { Browsers.adapter(for: settings.browser) }
 
@@ -48,6 +52,11 @@ final class Router: ObservableObject {
             try? await Task.sleep(for: .seconds(3))
             await profiles.refreshVisibleOrder(using: browser)
         }
+        connectivity.onUnreachable = { [weak self] in self?.outageNotified = false }
+        connectivity.onRecovered = { [weak self] in
+            Task { await self?.catchUp() }
+        }
+        connectivity.start()
         notifier.setUp(profiles: profiles.names)
         if settings.onboardingCompleted, settings.notificationsEnabled {
             notifier.requestAuthorization()
@@ -160,7 +169,13 @@ final class Router: ObservableObject {
         refreshSuggestion()
         refreshAttention()
 
-        if record.decision.needsAttention {
+        if case let .fallback(reason) = record.decision, reason.isNetworkFailure {
+            status = "\(reason == .offline ? "Offline" : "Can't reach Jev") · links without a rule open in \(verdict.profileName)"
+            if !outageNotified {
+                outageNotified = true
+                notifier.notifyOutage(reason, fallbackProfile: verdict.profileName)
+            }
+        } else if record.decision.needsAttention {
             notifier.notify(about: record)
         }
         SupportReminder.shared.linkRouted()
@@ -183,20 +198,16 @@ final class Router: ObservableObject {
             return DecisionPolicy.fallback(.noAPIKey, fallbackProfile: fallback)
         }
 
+        // Skip Jev while it can't be reached; the link opens at rule speed.
+        if let reason = connectivity.skipReason() {
+            return DecisionPolicy.fallback(reason, fallbackProfile: fallback)
+        }
+
         // Jev and a cold Dia launch overlap.
         browser.warmUp()
 
-        let request = Jev.makeRequest(
-            features: features,
-            scheme: url.scheme?.lowercased() ?? "https",
-            profiles: settings.jevProfiles(for: profiles.names),
-            openedFromApp: source?.name
-        )
-        do {
-            let response = try await jev.ask(request, apiKey: apiKey)
-            guard let outcome = JevOutcome(response: response) else {
-                return DecisionPolicy.fallback(.invalidResponse, fallbackProfile: fallback)
-            }
+        switch await askJev(url, features: features, sourceName: source?.name, apiKey: apiKey) {
+        case let .success(outcome):
             return DecisionPolicy.verdict(
                 for: outcome,
                 features: features,
@@ -204,11 +215,89 @@ final class Router: ObservableObject {
                 fallbackProfile: fallback,
                 profileThreshold: settings.profileThreshold
             )
-        } catch let failure as JevFailure {
+        case let .failure(failure):
             return DecisionPolicy.fallback(failure.reason, fallbackProfile: fallback)
-        } catch {
-            return DecisionPolicy.fallback(.invalidResponse, fallbackProfile: fallback)
         }
+    }
+
+    /// One Jev request, keeping `connectivity` informed: any answer from the server (even an
+    /// error status) means the network gets through; a network failure starts the backoff.
+    private func askJev(_ url: URL, features: LinkFeatures, sourceName: String?, apiKey: String) async -> Result<JevOutcome, JevFailure> {
+        let request = Jev.makeRequest(
+            features: features,
+            scheme: url.scheme?.lowercased() ?? "https",
+            profiles: settings.jevProfiles(for: profiles.names),
+            openedFromApp: sourceName
+        )
+        do {
+            let response = try await jev.ask(request, apiKey: apiKey)
+            connectivity.requestSucceeded()
+            guard let outcome = JevOutcome(response: response) else { return .failure(JevFailure(reason: .invalidResponse)) }
+            return .success(outcome)
+        } catch let failure as JevFailure {
+            if failure.reason.isNetworkFailure { connectivity.requestFailed() } else { connectivity.requestSucceeded() }
+            return .failure(failure)
+        } catch {
+            return .failure(JevFailure(reason: .invalidResponse))
+        }
+    }
+
+    // MARK: Catching up
+
+    /// Jev can be reached again: ask about the links that fell back while it couldn't be.
+    /// Nothing re-opens. Confident answers learn rules, as they would have live, and links Jev
+    /// says belonged elsewhere are flagged with a one-click move.
+    func catchUp() async {
+        guard !isCatchingUp, let apiKey else { return }
+        let items = OfflineCatchUp.items(from: history.records, now: Date())
+        guard !items.isEmpty else { return }
+        isCatchingUp = true
+        defer { isCatchingUp = false }
+
+        var checked = 0
+        var misplaced = 0
+        for item in items {
+            guard connectivity.state.skipReason == nil else { break }
+            let record = item.representative
+            guard let features = LinkFeatures(url: record.url) else { continue }
+            guard case let .success(outcome) = await askJev(record.url, features: features, sourceName: record.sourceApp, apiKey: apiKey) else {
+                continue
+            }
+            let verdict = DecisionPolicy.verdict(
+                for: outcome,
+                features: features,
+                knownProfiles: profiles.names,
+                fallbackProfile: fallbackProfileName,
+                profileThreshold: settings.profileThreshold
+            )
+            let isConfident: Bool
+            switch verdict.decision {
+            case .jev: isConfident = true
+            case .lowConfidence: isConfident = false
+            default: continue   // e.g. a profile that no longer exists
+            }
+            let answer = RoutingRecord.CatchUp(profileName: verdict.profileName, confidence: outcome.profileConfidence,
+                                               isConfident: isConfident, scope: outcome.scope)
+            // Learn, unless a rule has covered this link since.
+            var learnedID: UUID?
+            if let learn = verdict.learn,
+               rules.index.match(record.url, from: record.sourceBundleID, availableProfiles: profiles.availableNames) == nil {
+                learnedID = rules.upsert(key: learn, profileName: verdict.profileName, origin: .learned).id
+            }
+            for id in item.recordIDs {
+                history.update(id: id) {
+                    $0.catchUp = answer
+                    if let learnedID { $0.learnedRuleID = learnedID }
+                }
+            }
+            checked += 1
+            if answer.suggestsMove(from: record.profileName) { misplaced += item.recordIDs.count }
+        }
+        refreshAttention()
+        guard checked > 0 else { return }
+        status = misplaced > 0
+            ? "Back online · Jev thinks \(misplaced) link\(misplaced == 1 ? "" : "s") belonged elsewhere"
+            : "Back online · Jev checked \(checked) link\(checked == 1 ? "" : "s") opened without it"
     }
 
     /// Returns an error message if the link couldn't be opened in the requested profile.
@@ -235,6 +324,9 @@ final class Router: ObservableObject {
     func suggestedCorrectionKey(for record: RoutingRecord) -> RuleKey? {
         guard let features = LinkFeatures(url: record.url) else { return nil }
         switch record.decision {
+        case .fallback where record.catchUp != nil:
+            if let id = record.learnedRuleID, let rule = rules.rule(id: id) { return rule.key }
+            if let scope = record.catchUp?.scope, let key = features.ruleKey(for: scope) { return key }
         case let .rule(id, _):
             if let rule = rules.rule(id: id) { return rule.key }
         case let .jev(_, scope):
@@ -283,7 +375,8 @@ final class Router: ObservableObject {
 
     private func refreshAttention() {
         let count = history.records.filter { record in
-            record.date > acknowledgedAt && RoutingExplanation.explain(record, rule: rules.rule(id:)).needsAttention
+            let isNew = record.date > acknowledgedAt || (record.catchUp?.date ?? .distantPast) > acknowledgedAt
+            return isNew && RoutingExplanation.explain(record, rule: rules.rule(id:)).needsAttention
         }.count
         if count != attentionCount { attentionCount = count }
     }
@@ -329,7 +422,9 @@ final class Router: ObservableObject {
         guard hasAPIKey, keepWarmTask == nil else { return }
         keepWarmTask = Task { [weak self] in
             while let self, Date().timeIntervalSince(self.lastActivity) < 15 * 60 {
-                await self.jev.prewarm()
+                if self.connectivity.state.isReachable {
+                    self.connectivity.keepWarmFinished(reachedJev: await self.jev.prewarm())
+                }
                 try? await Task.sleep(for: .seconds(50))
             }
             self?.keepWarmTask = nil

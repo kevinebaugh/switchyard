@@ -96,6 +96,16 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         center.add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
     }
 
+    /// Once per stretch without Jev, on the first link it affects (instead of a notification per
+    /// fallback). Replaced, not stacked, if a second outage starts before it's dismissed.
+    func notifyOutage(_ reason: FallbackReason, fallbackProfile: String) {
+        guard AppSettings.shared.notificationsEnabled else { return }
+        let content = UNMutableNotificationContent()
+        content.title = reason == .offline ? "You're offline" : "Can't reach Jev"
+        content.body = "Links without a rule open in \(fallbackProfile) for now. Once Jev is back, Switchyard checks them and flags any that belonged elsewhere."
+        center.add(UNNotificationRequest(identifier: "outage", content: content, trigger: nil))
+    }
+
     /// The support reminder: quiet (no sound), and clicking it opens the checkout. Not gated on
     /// "Notify on fallbacks and errors", which is about routing; turning notifications off for
     /// Switchyard in System Settings still silences it.
