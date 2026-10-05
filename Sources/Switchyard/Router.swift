@@ -222,7 +222,8 @@ final class Router: ObservableObject {
 
     /// One Jev request, keeping `connectivity` informed: any answer from the server (even an
     /// error status) means the network gets through; a network failure starts the backoff.
-    private func askJev(_ url: URL, features: LinkFeatures, sourceName: String?, apiKey: String) async -> Result<JevOutcome, JevFailure> {
+    private func askJev(_ url: URL, features: LinkFeatures, sourceName: String?, apiKey: String,
+                        deadline: Duration = JevClient.deadline) async -> Result<JevOutcome, JevFailure> {
         let request = Jev.makeRequest(
             features: features,
             scheme: url.scheme?.lowercased() ?? "https",
@@ -230,7 +231,7 @@ final class Router: ObservableObject {
             openedFromApp: sourceName
         )
         do {
-            let response = try await jev.ask(request, apiKey: apiKey)
+            let response = try await jev.ask(request, apiKey: apiKey, deadline: deadline)
             connectivity.requestSucceeded()
             guard let outcome = JevOutcome(response: response) else { return .failure(JevFailure(reason: .invalidResponse)) }
             return .success(outcome)
@@ -247,6 +248,8 @@ final class Router: ObservableObject {
     /// Jev can be reached again: ask about the links that fell back while it couldn't be.
     /// Nothing re-opens. Confident answers learn rules, as they would have live, and links Jev
     /// says belonged elsewhere are flagged with a one-click move.
+    private static let catchUpDeadline: Duration = .seconds(4)
+
     func catchUp() async {
         guard !isCatchingUp, let apiKey else { return }
         let items = OfflineCatchUp.items(from: history.records, now: Date())
@@ -260,7 +263,9 @@ final class Router: ObservableObject {
             guard connectivity.state.skipReason == nil else { break }
             let record = item.representative
             guard let features = LinkFeatures(url: record.url) else { continue }
-            guard case let .success(outcome) = await askJev(record.url, features: features, sourceName: record.sourceApp, apiKey: apiKey) else {
+            // Nobody is waiting on these, and a just-rejoined network can be slow for a moment.
+            guard case let .success(outcome) = await askJev(record.url, features: features, sourceName: record.sourceApp,
+                                                             apiKey: apiKey, deadline: Self.catchUpDeadline) else {
                 continue
             }
             let verdict = DecisionPolicy.verdict(
