@@ -46,7 +46,7 @@ You pick one browser during setup. Rules remember which browser they're for, so 
    | Lower confidence | Open in Jev's top pick; nothing is saved, and the row is flagged ⚠︎ |
    | No key, timeout (1.2 s), offline, or an error | Open in the fallback profile (**Personal**) and show the reason |
 
-   **Offline, or on a network that can't reach Jev** (in-flight Wi-Fi before you sign in): after the first failure, links without a rule open in the fallback profile immediately instead of waiting. Switchyard checks again in the background, backing off from 5 seconds to every 5 minutes, and at once after a network change. When Jev is back, it asks about the links it opened without Jev (from the last day, up to 25). Confident answers learn rules, and links Jev says belonged elsewhere get a **Move to …** button. Nothing re-opens on its own.
+   **Offline, or on a network that can't reach Jev** (in-flight Wi-Fi before you sign in): links without a rule open in the fallback profile immediately instead of waiting. With no network that starts with the first link; on a network that can't reach Jev, the first link still waits out the 1.2 s. Switchyard checks again in the background, backing off from 5 seconds to every 5 minutes, and at once after a network change. When Jev is back, it asks about the links it opened without Jev (from the last day, up to 25). Confident answers learn rules, and links Jev says belonged elsewhere get a **Move to …** button. Nothing re-opens on its own.
 
 6. The browser opens the link in the chosen profile. Dia is asked through its AppleScript dictionary; Chrome and friends get `--profile-directory`, which the running browser picks up. Neither needs Accessibility permission or keyboard shortcuts.
 

@@ -245,11 +245,12 @@ final class Router: ObservableObject {
 
     // MARK: Catching up
 
+    /// Nobody waits on catch-up requests, and a just-rejoined network can be slow for a moment.
+    private static let catchUpDeadline: Duration = .seconds(4)
+
     /// Jev can be reached again: ask about the links that fell back while it couldn't be.
     /// Nothing re-opens. Confident answers learn rules, as they would have live, and links Jev
     /// says belonged elsewhere are flagged with a one-click move.
-    private static let catchUpDeadline: Duration = .seconds(4)
-
     func catchUp() async {
         guard !isCatchingUp, let apiKey else { return }
         let items = OfflineCatchUp.items(from: history.records, now: Date())
@@ -263,7 +264,6 @@ final class Router: ObservableObject {
             guard connectivity.state.skipReason == nil else { break }
             let record = item.representative
             guard let features = LinkFeatures(url: record.url) else { continue }
-            // Nobody is waiting on these, and a just-rejoined network can be slow for a moment.
             guard case let .success(outcome) = await askJev(record.url, features: features, sourceName: record.sourceApp,
                                                              apiKey: apiKey, deadline: Self.catchUpDeadline) else {
                 continue
