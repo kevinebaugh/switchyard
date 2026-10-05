@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import RouterCore
 import UserNotifications
@@ -27,6 +28,41 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     /// Asked during onboarding (or at launch once onboarding is done), not on first launch.
     func requestAuthorization() {
         center.requestAuthorization(options: [.alert, .sound]) { _, _ in }
+    }
+
+    func requestAuthorizationNow() async {
+        _ = try? await center.requestAuthorization(options: [.alert, .sound])
+    }
+
+    /// Whether macOS will show Switchyard's notifications, for Settings.
+    enum Access {
+        case allowed
+        /// Allowed, but the alert style is None: they only collect in Notification Center.
+        case quiet
+        case denied
+        case notAsked
+    }
+
+    func access() async -> Access {
+        let settings = await center.notificationSettings()
+        switch settings.authorizationStatus {
+        case .authorized, .provisional, .ephemeral:
+            return settings.alertStyle == .none ? .quiet : .allowed
+        case .denied:
+            return .denied
+        case .notDetermined:
+            return .notAsked
+        @unknown default:
+            return .allowed
+        }
+    }
+
+    /// System Settings → Notifications → Switchyard.
+    static func openSystemSettings() {
+        let id = Bundle.main.bundleIdentifier ?? "com.kevinebaugh.switchyard"
+        if let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension?id=\(id)") {
+            NSWorkspace.shared.open(url)
+        }
     }
 
     /// One category per profile the link opened in: confirm it first, then the other profiles.

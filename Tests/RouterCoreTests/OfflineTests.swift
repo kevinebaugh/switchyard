@@ -133,13 +133,13 @@ import Testing
         #expect(line(record("https://a.example/", .fallback(.offline),
                             catchUp: .init(profileName: "Work", confidence: 0.91, isConfident: true, scope: .domain),
                             learned: learned.id), [learned])
-            == .init(text: "Opened offline · Jev says Work (0.91)", needsAttention: true))
+            == .init(text: "Opened offline · Jev says Work (0.91)", needsAttention: true, badges: true))
         #expect(line(record("https://a.example/", .fallback(.unreachable),
                             catchUp: .init(profileName: "personal", confidence: 0.93, isConfident: true, scope: nil)))
             == .init(text: "Couldn't reach Jev · Jev agrees (0.93)", needsAttention: false))
         #expect(line(record("https://a.example/", .fallback(.timeout),
                             catchUp: .init(profileName: "Work", confidence: 0.55, isConfident: false, scope: nil)))
-            == .init(text: "Jev timed out · Jev unsure (0.55)", needsAttention: true))
+            == .init(text: "Jev timed out · Jev unsure (0.55)", needsAttention: true, badges: false))
 
         let yours = Rule(key: RuleKey(host: "a.example", hostMatch: .domain), profileName: "Personal", origin: .corrected)
         #expect(line(record("https://a.example/", .fallback(.offline), learned: yours.id), [yours])

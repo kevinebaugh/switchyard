@@ -4,8 +4,18 @@ import Foundation
 public enum RoutingExplanation {
     public struct Line: Equatable, Sendable {
         public let text: String
-        /// Worth a second look: Jev was unsure, or a fallback was used.
+        /// Worth a second look: Jev was unsure, or a fallback was used. Shown in orange.
         public let needsAttention: Bool
+        /// Counts toward the menu-bar badge. Usually the same as `needsAttention`; a catch-up
+        /// that's merely unsure doesn't count (after a flight there can be many, and none has an
+        /// obvious fix), only one that says the link belonged in another profile.
+        public let badges: Bool
+
+        public init(text: String, needsAttention: Bool, badges: Bool? = nil) {
+            self.text = text
+            self.needsAttention = needsAttention
+            self.badges = badges ?? needsAttention
+        }
     }
 
     /// - Parameter rule: looks up a rule by id in the current rule set (it may have changed or
@@ -74,7 +84,7 @@ public enum RoutingExplanation {
         let learned = saved.map { " · learned \($0)" } ?? ""
         let confidence = format(catchUp.confidence)
         guard catchUp.isConfident else {
-            return Line(text: "\(what) · Jev unsure (\(confidence))", needsAttention: true)
+            return Line(text: "\(what) · Jev unsure (\(confidence))", needsAttention: true, badges: false)
         }
         if catchUp.profileName.caseInsensitiveCompare(record.profileName) == .orderedSame {
             return Line(text: "\(what) · Jev agrees (\(confidence))\(learned)", needsAttention: false)

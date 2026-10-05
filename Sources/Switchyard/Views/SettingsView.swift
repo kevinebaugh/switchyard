@@ -17,6 +17,7 @@ struct SettingsView: View {
     @State private var isDefaultBrowser = DefaultBrowser.isDefault
     @State private var launchAtLogin = LoginItem.isEnabled
     @State private var systemError: String?
+    @State private var notificationAccess: Notifier.Access?
 
     var body: some View {
         Form {
@@ -160,6 +161,9 @@ struct SettingsView: View {
                     Spacer()
                     Button("About Switchyard") { AboutPanel.show() }
                 }
+                if let systemError {
+                    Text(systemError).font(.caption).foregroundStyle(.red)
+                }
             }
 
             if support.isEnabled {
@@ -201,18 +205,54 @@ struct SettingsView: View {
                 }
             } header: {
                 Text("Updates")
-                Toggle("Notify on fallbacks and errors", isOn: $settings.notificationsEnabled)
+            }
+
+            Section {
+                LabeledContent("macOS") {
+                    switch notificationAccess {
+                    case nil:
+                        ProgressView().controlSize(.small)
+                    case .allowed:
+                        Label("Allowed", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
+                    case .quiet:
+                        HStack {
+                            Text("Allowed, but banners are off").foregroundStyle(.orange)
+                            Button("Open Settings…", action: Notifier.openSystemSettings)
+                        }
+                    case .denied:
+                        HStack {
+                            Text("Off for Switchyard").foregroundStyle(.orange)
+                            Button("Open Settings…", action: Notifier.openSystemSettings)
+                        }
+                    case .notAsked:
+                        Button("Allow Notifications…") {
+                            Task {
+                                await Notifier.shared.requestAuthorizationNow()
+                                notificationAccess = await Notifier.shared.access()
+                            }
+                        }
+                    }
+                }
+                Toggle("Notify on fallbacks, outages and errors", isOn: $settings.notificationsEnabled)
                 Toggle("Also notify when Jev is unsure", isOn: $settings.notifyLowConfidence)
                     .disabled(!settings.notificationsEnabled)
-                if let systemError {
-                    Text(systemError).font(.caption).foregroundStyle(.red)
-                }
+            } header: {
+                Text("Notifications")
+            } footer: {
+                Text("A Focus can hold notifications back; they still collect in Notification Center.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
         .onAppear {
             isDefaultBrowser = DefaultBrowser.isDefault
             launchAtLogin = LoginItem.isEnabled
+        }
+        // Also on returning from System Settings.
+        .task { notificationAccess = await Notifier.shared.access() }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            Task { notificationAccess = await Notifier.shared.access() }
         }
     }
 

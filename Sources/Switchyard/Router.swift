@@ -381,7 +381,7 @@ final class Router: ObservableObject {
     private func refreshAttention() {
         let count = history.records.filter { record in
             let isNew = record.date > acknowledgedAt || (record.catchUp?.date ?? .distantPast) > acknowledgedAt
-            return isNew && RoutingExplanation.explain(record, rule: rules.rule(id:)).needsAttention
+            return isNew && RoutingExplanation.explain(record, rule: rules.rule(id:)).badges
         }.count
         if count != attentionCount { attentionCount = count }
     }
