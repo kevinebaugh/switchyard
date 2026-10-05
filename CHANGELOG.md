@@ -4,9 +4,12 @@ All notable changes to Switchyard. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+- Runs on Intel Macs too: the app is now universal (macOS 26 or later).
+- Install with Homebrew: `brew install --cask kevinebaugh/tap/switchyard`.
 - Works without internet. With no network, or a network that can't reach Jev (like in-flight Wi-Fi before you sign in), links without a rule open in the fallback profile right away instead of waiting 1.2 s each.
 - Switchyard checks in the background (sooner after a network change) and, once Jev is back, asks about the links it opened without Jev. Confident answers learn rules; links Jev says belonged elsewhere get a **Move to …** button.
 - One notification per outage instead of one per link, and offline links stay off the menu-bar badge until Jev has looked at them.
+- Settings shows whether macOS allows Switchyard's notifications, with a shortcut to System Settings.
 
 ## [0.9.2] - 2026-10-02
 
