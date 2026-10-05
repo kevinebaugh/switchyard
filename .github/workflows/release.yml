@@ -1,7 +1,7 @@
 name: Release
 
 # Push a v* tag (after adding that version's section to CHANGELOG.md) to build, sign, notarize
-# and publish a release, update the Sparkle feed, and bump the Homebrew cask.
+# and publish a release and update the Sparkle feed.
 #
 # Repository secrets:
 #   DEVELOPER_ID_P12             the "Developer ID Application" certificate and key, base64 .p12
@@ -10,7 +10,6 @@ name: Release
 #   NOTARY_KEY_P8                App Store Connect API key (.p8 contents) for notarytool
 #   NOTARY_KEY_ID, NOTARY_ISSUER that key's IDs
 #   SPARKLE_ED_PRIVATE_KEY       the Sparkle EdDSA private key that signs updates
-#   HOMEBREW_TAP_TOKEN           a token that can push to kevinebaugh/homebrew-tap
 
 on:
   push:
@@ -71,23 +70,6 @@ jobs:
           gh release create "$GITHUB_REF_NAME" \
             build/release/Switchyard-$version.dmg build/release/Switchyard-$version.zip build/release/appcast.xml \
             --title "Switchyard $version" --notes-file build/release/notes.md --latest
-
-      - name: Bump the Homebrew cask
-        env:
-          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-        run: |
-          version="${GITHUB_REF_NAME#v}"
-          sha256="$(shasum -a 256 build/release/Switchyard-$version.zip | cut -d' ' -f1)"
-          git clone "https://x-access-token:$GH_TOKEN@github.com/kevinebaugh/homebrew-tap.git" "$RUNNER_TEMP/tap"
-          mkdir -p "$RUNNER_TEMP/tap/Casks"
-          sed -e "s/@VERSION@/$version/" -e "s/@SHA256@/$sha256/" packaging/homebrew/switchyard.rb \
-            > "$RUNNER_TEMP/tap/Casks/switchyard.rb"
-          cd "$RUNNER_TEMP/tap"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add Casks/switchyard.rb
-          git commit -m "switchyard $version"
-          git push
 
       - name: Clean up
         if: always()

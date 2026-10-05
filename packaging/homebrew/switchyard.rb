@@ -1,5 +1,6 @@
-# Template for kevinebaugh/homebrew-tap's Casks/switchyard.rb. The release workflow fills in
-# @VERSION@ and @SHA256@ (of the zip) and pushes it to the tap.
+# Draft cask for a future submission to Homebrew/homebrew-cask (once Switchyard meets its
+# notability bar). Fill in @VERSION@ and @SHA256@ (of the release zip); it passes `brew style`
+# and `brew audit --online`.
 cask "switchyard" do
   version "@VERSION@"
   sha256 "@SHA256@"

@@ -18,5 +18,5 @@ $notes
 
 ### Install
 
-Already using Switchyard? Settings → **Check for Updates…**. New here: download **Switchyard-$version.dmg**, open it, and drag Switchyard to Applications, or run \`brew install --cask kevinebaugh/tap/switchyard\`. Needs macOS 26 or later, on Apple silicon or Intel.
+Already using Switchyard? Settings → **Check for Updates…**. New here: download **Switchyard-$version.dmg**, open it, and drag Switchyard to Applications. Needs macOS 26 or later, on Apple silicon or Intel.
 NOTES

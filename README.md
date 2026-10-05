@@ -97,17 +97,11 @@ You'll need:
 - one of the browsers above
 - a [TypeSafe](https://typesafe.ai) API key for Jev
 
-With [Homebrew](https://brew.sh):
-
-```sh
-brew install --cask kevinebaugh/tap/switchyard
-```
-
-Or by hand:
 1. Download **Switchyard-x.y.z.dmg** from the [latest release](https://github.com/kevinebaugh/switchyard/releases/latest).
 2. Open it and drag **Switchyard** to Applications.
+3. Open Switchyard; setup walks you through the rest.
 
-Then open Switchyard; setup walks you through the rest. Switchyard is signed and notarized by Apple, and it updates itself (see [Updates](#updates)), so Homebrew leaves updates to it.
+Switchyard is signed and notarized by Apple, and it updates itself (see [Updates](#updates)).
 
 ## Build from source
 
@@ -147,7 +141,7 @@ Jev knows only what your descriptions say, so they're the most important setting
 
 Setup drafts these for you (see above). A profile added later starts with a generic description if it's named `Work`, `Personal` or `Test`, and empty otherwise. Descriptions are stored on your Mac, not in the rules file.
 
-Releases are automated: add the version's section to `CHANGELOG.md`, then push a `v*` tag. `.github/workflows/release.yml` builds the universal app, signs and notarizes it, publishes the GitHub release with the DMG, zip and update feed (`appcast.xml`), and bumps the Homebrew cask. The signing material lives in repository secrets, listed at the top of the workflow. `./scripts/release.sh` does the same build locally (it needs a Developer ID identity and notarization credentials; see the script's header).
+Releases are automated: add the version's section to `CHANGELOG.md`, then push a `v*` tag. `.github/workflows/release.yml` builds the universal app, signs and notarizes it, publishes the GitHub release with the DMG, zip and update feed (`appcast.xml`). The signing material lives in repository secrets, listed at the top of the workflow. `./scripts/release.sh` does the same build locally (it needs a Developer ID identity and notarization credentials; see the script's header).
 
 Without an Apple Development signing identity the app is ad-hoc signed. macOS may ask again for Automation and Keychain access after each rebuild. To use a stable identity, put `export SWITCHYARD_SIGNING_IDENTITY='Apple Development: …'` in `scripts/signing.local.zsh` (gitignored).
 
