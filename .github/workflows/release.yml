@@ -1,0 +1,96 @@
+name: Release
+
+# Push a v* tag (after adding that version's section to CHANGELOG.md) to build, sign, notarize
+# and publish a release, update the Sparkle feed, and bump the Homebrew cask.
+#
+# Repository secrets:
+#   DEVELOPER_ID_P12             the "Developer ID Application" certificate and key, base64 .p12
+#   DEVELOPER_ID_P12_PASSWORD    its password
+#   SWITCHYARD_TEAM_ID           the team that certificate belongs to
+#   NOTARY_KEY_P8                App Store Connect API key (.p8 contents) for notarytool
+#   NOTARY_KEY_ID, NOTARY_ISSUER that key's IDs
+#   SPARKLE_ED_PRIVATE_KEY       the Sparkle EdDSA private key that signs updates
+#   HOMEBREW_TAP_TOKEN           a token that can push to kevinebaugh/homebrew-tap
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-26
+    env:
+      SWITCHYARD_TEAM_ID: ${{ secrets.SWITCHYARD_TEAM_ID }}
+      SWITCHYARD_NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+      SWITCHYARD_NOTARY_ISSUER: ${{ secrets.NOTARY_ISSUER }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0   # build numbers are the commit count, versions come from tags
+
+      - name: Check the tag matches CHANGELOG.md
+        run: scripts/release-notes.sh "${GITHUB_REF_NAME#v}" > /dev/null
+
+      - name: Import the signing certificate
+        env:
+          P12: ${{ secrets.DEVELOPER_ID_P12 }}
+          P12_PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
+        run: |
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          keychain_password="$(uuidgen)"
+          echo "$P12" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
+          security create-keychain -p "$keychain_password" "$keychain"
+          security set-keychain-settings -lut 3600 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          security import "$RUNNER_TEMP/certificate.p12" -k "$keychain" -P "$P12_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$keychain_password" "$keychain" > /dev/null
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          rm "$RUNNER_TEMP/certificate.p12"
+
+      - name: Write the notarization and Sparkle keys
+        env:
+          NOTARY_KEY_P8: ${{ secrets.NOTARY_KEY_P8 }}
+          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys
+          printf '%s\n' "$NOTARY_KEY_P8" > ~/.appstoreconnect/private_keys/AuthKey_$SWITCHYARD_NOTARY_KEY_ID.p8
+          printf '%s' "$SPARKLE_ED_PRIVATE_KEY" > "$RUNNER_TEMP/sparkle_ed_key"
+          echo "SPARKLE_ED_KEY_FILE=$RUNNER_TEMP/sparkle_ed_key" >> "$GITHUB_ENV"
+
+      - name: Build, notarize and package
+        run: scripts/release.sh
+
+      - name: Publish the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          gh release create "$GITHUB_REF_NAME" \
+            build/release/Switchyard-$version.dmg build/release/Switchyard-$version.zip build/release/appcast.xml \
+            --title "Switchyard $version" --notes-file build/release/notes.md --latest
+
+      - name: Bump the Homebrew cask
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          sha256="$(shasum -a 256 build/release/Switchyard-$version.zip | cut -d' ' -f1)"
+          git clone "https://x-access-token:$GH_TOKEN@github.com/kevinebaugh/homebrew-tap.git" "$RUNNER_TEMP/tap"
+          mkdir -p "$RUNNER_TEMP/tap/Casks"
+          sed -e "s/@VERSION@/$version/" -e "s/@SHA256@/$sha256/" packaging/homebrew/switchyard.rb \
+            > "$RUNNER_TEMP/tap/Casks/switchyard.rb"
+          cd "$RUNNER_TEMP/tap"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Casks/switchyard.rb
+          git commit -m "switchyard $version"
+          git push
+
+      - name: Clean up
+        if: always()
+        run: |
+          security delete-keychain "$RUNNER_TEMP/signing.keychain-db" 2>/dev/null || true
+          rm -f "$RUNNER_TEMP/sparkle_ed_key" ~/.appstoreconnect/private_keys/AuthKey_*.p8

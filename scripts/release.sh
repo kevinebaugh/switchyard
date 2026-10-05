@@ -2,8 +2,11 @@
 # Builds, notarizes and packages a release into build/release/:
 #   Switchyard-<version>.dmg   drag-to-Applications disk image (notarized, stapled)
 #   Switchyard-<version>.zip   the stapled app, for the updater and Homebrew
-#   appcast.xml                the update feed (signed with the Sparkle key in your keychain);
-#                              upload all three to the GitHub release for v<version>
+#   appcast.xml                the update feed (signed with the Sparkle key in your keychain, or
+#                              the key file named by SPARKLE_ED_KEY_FILE)
+#   notes.md                   the GitHub release notes
+# Upload the first three to the GitHub release for v<version>; .github/workflows/release.yml
+# does all of this on a v* tag.
 #
 # Needs a "Developer ID Application" identity (see build-app.sh) and notarization credentials,
 # either (preferred, works from any shell or CI) an App Store Connect API key:
@@ -89,7 +92,10 @@ items = [f"<li>{html.escape(l[2:])}</li>" for l in lines if l.startswith("- ")]
 print("\n".join(paragraphs) + (f"\n<ul>{''.join(items)}</ul>" if items else ""))
 PY
 sparkle_bin="$("$project_root/scripts/sparkle-tools.sh")"
-"$sparkle_bin/generate_appcast" \
+# The EdDSA key comes from the login keychain, or (in CI) from a file named by SPARKLE_ED_KEY_FILE.
+ed_key_flags=()
+[[ -n "${SPARKLE_ED_KEY_FILE:-}" ]] && ed_key_flags=(--ed-key-file "$SPARKLE_ED_KEY_FILE")
+"$sparkle_bin/generate_appcast" "${ed_key_flags[@]}" \
     --download-url-prefix "https://github.com/kevinebaugh/switchyard/releases/download/v$version/" \
     --embed-release-notes \
     -o "$out/appcast.xml" "$feed"
@@ -99,4 +105,6 @@ spctl --assess --type open --context context:primary-signature -v "$dmg"
 echo
 echo "Release $version ready in $out:"
 (cd "$out" && shasum -a 256 *.dmg *.zip && ls appcast.xml)
-echo "Next: create the GitHub release v$version and attach the DMG, zip and appcast.xml."
+"$project_root/scripts/release-notes.sh" "$version" > "$out/notes.md"
+echo "Next: create the GitHub release v$version with notes.md, attaching the DMG, zip and appcast.xml"
+echo "(the release workflow does this on a v* tag)."
