@@ -87,12 +87,12 @@ extension NSWorkspace.OpenConfiguration {
 
 enum Browsers {
     private static let dia = DiaAdapter()
-    private static let chromium = Dictionary(uniqueKeysWithValues: BrowserKind.allCases
-        .filter { $0.opening == .profileDirectoryFlag }
-        .map { ($0, ChromiumAdapter(kind: $0)) })
+    private static let launching = Dictionary(uniqueKeysWithValues: BrowserKind.allCases
+        .filter(\.opensWithArguments)
+        .map { ($0, LaunchArgumentsAdapter(kind: $0)) })
 
     static func adapter(for kind: BrowserKind) -> BrowserAdapter {
-        kind == .dia ? dia : chromium[kind]!
+        kind == .dia ? dia : launching[kind]!
     }
 
     /// Supported browsers installed on this Mac, verified ones first.
@@ -261,11 +261,12 @@ final class DiaAdapter: BrowserAdapter, @unchecked Sendable {
     }
 }
 
-/// Chrome, Brave, Edge, Vivaldi: `--profile-directory=<dir>` on a new launch, which Chromium
-/// hands to the already-running browser. No Automation needed. Reading the profile list lives
-/// in the browser's data folder, which macOS protects ("data from other apps"), so that read is
-/// this adapter's permission.
-final class ChromiumAdapter: BrowserAdapter, @unchecked Sendable {
+/// Chrome, Brave, Edge, Vivaldi and Firefox: a new launch with the profile in its arguments
+/// (`--profile-directory=<dir>`, or Firefox's `-profile <path> -new-tab`), which the browser
+/// hands to its already-running instance. No Automation needed. The profile list lives in the
+/// browser's data folder, which macOS protects ("data from other apps"), so reading it is this
+/// adapter's permission.
+final class LaunchArgumentsAdapter: BrowserAdapter, @unchecked Sendable {
     let kind: BrowserKind
 
     init(kind: BrowserKind) {
@@ -282,14 +283,14 @@ final class ChromiumAdapter: BrowserAdapter, @unchecked Sendable {
 
     func visibleProfileOrder() async -> [String]? { nil }
 
-    /// Reading `Local State` is the permission. It's only attempted after setup asked once,
+    /// Reading the profile list is the permission. It's only attempted after setup asked once,
     /// so a status check never shows the macOS prompt by surprise.
     func permission(ask: Bool) async -> BrowserPermission {
         let defaults = AppEnvironment.defaults
         guard ask || defaults.bool(forKey: askedKey) else { return .notDetermined }
         if ask { defaults.set(true, forKey: askedKey) }
 
-        let file = ChromiumLocalState.fileURL(for: kind)
+        let file = kind.profileListFile()
         return await Task.detached(priority: .userInitiated) {
             do {
                 _ = try Data(contentsOf: file)
@@ -309,7 +310,7 @@ final class ChromiumAdapter: BrowserAdapter, @unchecked Sendable {
         guard let applicationURL else { throw BrowserLaunchError.notInstalled(kind) }
         let configuration = NSWorkspace.OpenConfiguration.activating(true)
         configuration.createsNewApplicationInstance = true   // `open -n`: the new process hands off and exits
-        configuration.arguments = ["--profile-directory=\(profile.directory)", url.absoluteString]
+        configuration.arguments = kind.launchArguments(opening: url, in: profile)
         _ = try await NSWorkspace.shared.openApplication(at: applicationURL, configuration: configuration)
     }
 }

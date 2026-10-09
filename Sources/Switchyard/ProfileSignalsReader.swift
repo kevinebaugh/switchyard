@@ -9,13 +9,13 @@ enum ProfileSignalsReader {
     static let historyDays = 90
 
     static func signals(for profiles: [BrowserProfile], in browser: BrowserKind) -> [ProfileSignals] {
-        let userData = browser.userDataDirectory()
-        return profiles.map { profile in
-            let folder = userData.appendingPathComponent(profile.directory, isDirectory: true)
+        profiles.map { profile in
+            let folder = browser.profileFolder(profile)
+            let rows = browser == .firefox ? firefoxHistoryRows(in: folder) : historyRows(in: folder)
             return ProfileSignals(
                 name: profile.name,
                 accounts: accounts(for: profile, in: folder),
-                siteVisits: ProfileDescriber.siteVisits(from: historyRows(in: folder))
+                siteVisits: ProfileDescriber.siteVisits(from: rows)
             )
         }
     }
@@ -59,8 +59,16 @@ enum ProfileSignalsReader {
                      parameter: Int64(cutoff))
     }
 
-    private static func query(folder: URL, sql: String, parameter: Int64) -> [(url: String, visits: Int)] {
-        let file = folder.appendingPathComponent("History")
+    /// Firefox keeps history in `places.sqlite`, with timestamps in microseconds since 1970.
+    private static func firefoxHistoryRows(in folder: URL) -> [(url: String, visits: Int)] {
+        let cutoff = (Date().timeIntervalSince1970 - Double(historyDays) * 86_400) * 1_000_000
+        return query(folder: folder, file: "places.sqlite",
+                     sql: "SELECT url, visit_count FROM moz_places WHERE hidden = 0 AND last_visit_date > ?1",
+                     parameter: Int64(cutoff))
+    }
+
+    private static func query(folder: URL, file name: String = "History", sql: String, parameter: Int64) -> [(url: String, visits: Int)] {
+        let file = folder.appendingPathComponent(name)
         guard FileManager.default.fileExists(atPath: file.path) else { return [] }
 
         // immutable=1: read Dia's live database without taking locks or touching its journal.

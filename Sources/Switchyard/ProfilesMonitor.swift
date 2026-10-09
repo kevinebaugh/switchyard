@@ -1,8 +1,9 @@
 import Foundation
 import RouterCore
 
-/// The selected browser's profiles, re-read whenever its `Local State` changes (checked by
-/// mtime, so it's cheap enough to call on every routed link).
+/// The selected browser's profiles, re-read whenever its profile list (`Local State`, or
+/// Firefox's `profiles.ini`) changes (checked by mtime, so it's cheap enough to call on every
+/// routed link).
 @MainActor
 final class ProfilesMonitor: ObservableObject {
     static let shared = ProfilesMonitor()
@@ -53,13 +54,13 @@ final class ProfilesMonitor: ObservableObject {
         // setup has asked for access.
         guard Browsers.adapter(for: browser).canReadProfilesSilently else { return profiles }
 
-        let url = ChromiumLocalState.fileURL(for: browser)
+        let url = browser.profileListFile()
         let modified = (try? FileManager.default.attributesOfItem(atPath: url.path))?[.modificationDate] as? Date
         guard modified != lastModified || profiles.isEmpty else { return profiles }
         lastModified = modified
 
         guard let data = try? Data(contentsOf: url) else { return profiles }
-        let fresh = ChromiumLocalState.profiles(from: data)
+        let fresh = browser.profiles(fromProfileList: data)
         guard !fresh.isEmpty else { return profiles }
 
         for rename in ChromiumLocalState.renames(from: localStateProfiles, to: fresh) {

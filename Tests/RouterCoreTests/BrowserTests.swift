@@ -56,11 +56,13 @@ import Testing
 }
 
 @Suite struct BrowserKindTests {
-    @Test func chromiumBrowsersUseTheProfileFlagAndDiaUsesAppleScript() {
+    @Test func eachBrowserOpensItsOwnWay() {
         #expect(BrowserKind.dia.opening == .appleScript)
-        for kind in BrowserKind.allCases where kind != .dia {
+        #expect(BrowserKind.firefox.opening == .firefoxProfile)
+        for kind in BrowserKind.allCases where kind != .dia && kind != .firefox {
             #expect(kind.opening == .profileDirectoryFlag)
         }
+        #expect(BrowserKind.allCases.filter { !$0.opensWithArguments } == [.dia])
     }
 
     @Test func dataFoldersAreDistinct() {

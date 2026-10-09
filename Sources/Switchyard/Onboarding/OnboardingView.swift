@@ -463,8 +463,8 @@ private struct ProfilesStep: View {
 private struct PermissionStep: View {
     @ObservedObject var model: OnboardingModel
 
-    /// Dia needs Automation to open tabs; Chrome & co. only need Switchyard to read their
-    /// (macOS-protected) profile list.
+    /// Dia needs Automation to open tabs; Chrome & co. and Firefox only need Switchyard to read
+    /// their (macOS-protected) profile list.
     private struct Copy {
         let title, subtitle, action, granted, denied, footnote: String
     }
@@ -481,14 +481,16 @@ private struct PermissionStep: View {
                 denied: "macOS is blocking Switchyard from controlling \(name). Turn on \(name) under Switchyard in Privacy & Security → Automation.",
                 footnote: "This lets Switchyard send commands to \(name) only. It can't see or control other apps."
             )
-        case .profileDirectoryFlag:
+        case .profileDirectoryFlag, .firefoxProfile:
             return Copy(
                 title: "Let Switchyard read your \(name) profiles",
                 subtitle: "Switchyard reads \(name)'s profile list, and on this Mac only the sites each profile uses most, so it can set itself up. macOS will ask you to allow this once.",
                 action: "Allow Access to \(name) Profiles…",
                 granted: "Switchyard can read your \(name) profiles.",
                 denied: "macOS is blocking Switchyard from reading \(name)'s data. Allow Switchyard in System Settings → Privacy & Security (App Data, or Full Disk Access), then check again.",
-                footnote: "Links open with \(name)'s own profile switch, so Switchyard doesn't need to control \(name) or any other app."
+                footnote: model.browser == .firefox
+                    ? "Links open with Firefox's own profile switch, so Switchyard doesn't need to control Firefox or any other app. Each Firefox profile runs as its own window in the Dock."
+                    : "Links open with \(name)'s own profile switch, so Switchyard doesn't need to control \(name) or any other app."
             )
         }
     }
@@ -512,7 +514,7 @@ private struct PermissionStep: View {
                     StatusRow(kind: .problem, text: copy.denied)
                     HStack {
                         Button("Open Privacy & Security", action: model.openPrivacySettings)
-                        if model.browser.opening == .profileDirectoryFlag {
+                        if model.browser.opensWithArguments {
                             Button("Check Again", action: model.askPermission)
                         }
                     }
