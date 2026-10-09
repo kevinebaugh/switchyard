@@ -56,7 +56,8 @@ jobs:
         run: |
           mkdir -p ~/.appstoreconnect/private_keys
           printf '%s\n' "$NOTARY_KEY_P8" > ~/.appstoreconnect/private_keys/AuthKey_$SWITCHYARD_NOTARY_KEY_ID.p8
-          printf '%s' "$SPARKLE_ED_PRIVATE_KEY" > "$RUNNER_TEMP/sparkle_ed_key"
+          # The key is one base64 string; drop any whitespace a paste may have added.
+          printf '%s' "$SPARKLE_ED_PRIVATE_KEY" | tr -d '[:space:]' > "$RUNNER_TEMP/sparkle_ed_key"
           echo "SPARKLE_ED_KEY_FILE=$RUNNER_TEMP/sparkle_ed_key" >> "$GITHUB_ENV"
 
       - name: Build, notarize and package
