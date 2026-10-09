@@ -2,7 +2,7 @@
 
 All notable changes to Switchyard. Versions follow [Semantic Versioning](https://semver.org).
 
-## [Unreleased]
+## [0.9.4] - 2026-10-09
 
 - Runs on Intel Macs too: the app is now universal (macOS 26 or later).
 - Works without internet. With no network, or a network that can't reach Jev (like in-flight Wi-Fi before you sign in), links without a rule open in the fallback profile right away instead of waiting 1.2 s each.
