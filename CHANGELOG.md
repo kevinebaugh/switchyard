@@ -2,7 +2,7 @@
 
 All notable changes to Switchyard. Versions follow [Semantic Versioning](https://semver.org).
 
-## [Unreleased]
+## [0.9.5] - 2026-10-09
 
 - Firefox support. Switchyard lists the profiles Firefox's profile menu shows, with their names and theme colours, and opens each link in the right one. Each Firefox profile runs as its own app, so a link may bring a different Firefox window forward. Setup asks once for access to Firefox's data folder, as it does for Chrome.
 
