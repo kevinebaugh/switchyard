@@ -6,7 +6,7 @@
 
 **Every link on the right track in your browser.**
 
-Switchyard is a macOS menu-bar app that opens every link in the right browser profile: work links in your work profile, personal links in your personal one. It works with [Dia](https://www.diabrowser.com/) and [Chrome](https://www.google.com/chrome/), and should work with Brave, Edge and Vivaldi.
+Switchyard is a macOS menu-bar app that opens every link in the right browser profile: work links in your work profile, personal links in your personal one. It works with [Dia](https://www.diabrowser.com/), [Chrome](https://www.google.com/chrome/) and [Firefox](https://www.firefox.com/), and should work with Brave, Edge and Vivaldi.
 
 Most links are routed by rules on your Mac, instantly and without going online. When a link matches no rule, Switchyard asks [Jev](https://typesafe.ai/blog/introducing-system-one-models-and-jev), a fast AI model from [TypeSafe](https://typesafe.ai). Instead of writing text, Jev picks one answer from a fixed list and says how sure it is. You write a sentence about what each profile is for, and for a link like `app.shortcut.com/acme/story/12` Jev answers something like "Work, 92% sure" in a fraction of a second. Sure answers usually become rules, so the same kind of link doesn't need to ask again. Unsure ones are flagged in the menu, where one click moves the link to the right profile and can save a rule.
 
@@ -20,6 +20,7 @@ Inspired by [jdsimcoe/dia-router](https://github.com/jdsimcoe/dia-router), which
 | --- | --- | --- | --- |
 | Dia | Dia's AppleScript dictionary (Dia ignores Chromium's profile flag) | Automation permission for Dia | Supported |
 | Chrome | `--profile-directory`, handed to the running Chrome | Access to Chrome's data folder, to read its profiles | Supported |
+| Firefox | `-profile <folder> -new-tab`, handed to that profile's running Firefox (each Firefox profile runs as its own app) | Access to Firefox's data folder, to read its profiles | Supported |
 | Brave, Edge, Vivaldi | Same as Chrome | Same as Chrome | Should work; not yet tested |
 | Safari | Safari's scripting has no way to choose a profile | | Not possible today |
 
