@@ -85,11 +85,15 @@ public enum BrowserKind: String, Codable, CaseIterable, Sendable, Identifiable {
         userDataDirectory(home: home).appendingPathComponent(self == .firefox ? "profiles.ini" : "Local State")
     }
 
-    /// The browser's profiles, from the contents of `profileListFile`.
-    public func profiles(fromProfileList data: Data, home: URL = FileManager.default.homeDirectoryForCurrentUser) -> [BrowserProfile] {
+    /// The browser's profiles, from the contents of `profileListFile` (and, for Firefox's
+    /// profile manager, the rows of its profile group database).
+    public func profiles(fromProfileList data: Data, firefoxGroup: [FirefoxProfiles.GroupProfile] = [],
+                         home: URL = FileManager.default.homeDirectoryForCurrentUser) -> [BrowserProfile] {
         switch self {
-        case .firefox: FirefoxProfiles.profiles(fromINI: String(decoding: data, as: UTF8.self), root: userDataDirectory(home: home))
-        default: ChromiumLocalState.profiles(from: data)
+        case .firefox:
+            FirefoxProfiles.profiles(fromINI: String(decoding: data, as: UTF8.self), root: userDataDirectory(home: home), group: firefoxGroup)
+        default:
+            ChromiumLocalState.profiles(from: data)
         }
     }
 

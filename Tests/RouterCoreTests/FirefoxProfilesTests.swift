@@ -75,4 +75,59 @@ import Testing
         let after = FirefoxProfiles.profiles(fromINI: ini.replacingOccurrences(of: "Name=Work", with: "Name=Job"), root: root)
         #expect(ChromiumLocalState.renames(from: before, to: after).map { "\($0.from)→\($0.to)" } == ["Work→Job"])
     }
+
+    // The layout Firefox's profile manager writes: profiles.ini names a group database by
+    // StoreID, keeps the unused "default" profile, and doesn't list newer profiles at all.
+    let managerINI = """
+        [General]
+        StartWithLastProfile=1
+        Version=2
+
+        [Profile0]
+        Name=default-release
+        IsRelative=1
+        Path=Profiles/aaaa1111.default-release
+        StoreID=652a8792
+        ShowSelector=1
+
+        [Install2656FF1E876E9973]
+        Default=Profiles/aaaa1111.default-release
+        Locked=1
+
+        [Profile1]
+        Name=default
+        IsRelative=1
+        Path=Profiles/bbbb2222.default
+        Default=1
+        """
+
+    @Test func profileManagerGroupIsWhatFirefoxShows() {
+        #expect(FirefoxProfiles.groupDatabaseName(fromINI: managerINI) == "652a8792.sqlite")
+        #expect(FirefoxProfiles.groupDatabaseName(fromINI: ini) == nil)
+
+        let group = [
+            FirefoxProfiles.GroupProfile(path: "Profiles/aaaa1111.default-release", name: "Original profile",
+                                         themeForeground: "rgb(21,20,26)", themeBackground: "rgb(240,240,244)"),
+            FirefoxProfiles.GroupProfile(path: "Profiles/cccc3333.Profile 1", name: "Work",
+                                         themeForeground: "rgb(62,41,118)", themeBackground: "rgb(245,236,255)"),
+        ]
+        let profiles = FirefoxProfiles.profiles(fromINI: managerINI, root: root, group: group)
+        #expect(profiles.map(\.name) == ["Original profile", "Work"])
+        #expect(profiles[1].directory == "/Users/someone/Library/Application Support/Firefox/Profiles/cccc3333.Profile 1")
+        #expect(profiles[0].colorARGB == nil)            // default theme: greys, so Switchyard's palette
+        #expect(profiles[1].colorARGB == 0xFF3E_2976)     // the Work theme's purple
+    }
+
+    @Test func classicSetupHidesTheUnusedDefaultProfile() {
+        #expect(FirefoxProfiles.profiles(fromINI: managerINI, root: root).map(\.name) == ["default-release"])
+        let onlyDefault = "[Profile0]\nName=default\nIsRelative=1\nPath=Profiles/x.default\n"
+        #expect(FirefoxProfiles.profiles(fromINI: onlyDefault, root: root).map(\.name) == ["default"])
+    }
+
+    @Test func themeColours() {
+        #expect(FirefoxProfiles.rgb("rgba(62, 41, 118, 1)")! == (62, 41, 118))
+        #expect(FirefoxProfiles.rgb("not a colour") == nil)
+        #expect(FirefoxProfiles.themeColor(foreground: "rgb(255,255,255)", background: "rgb(0,120,212)") == 0xFF00_78D4)
+        #expect(FirefoxProfiles.themeColor(foreground: nil, background: nil) == nil)
+    }
 }

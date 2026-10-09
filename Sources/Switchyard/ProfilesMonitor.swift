@@ -14,6 +14,8 @@ final class ProfilesMonitor: ObservableObject {
 
     private var browser: BrowserKind
     private var lastModified: Date?
+    /// Firefox's profile group database, once profiles.ini has named it.
+    private var firefoxDatabase: URL?
     private var localStateProfiles: [BrowserProfile] = []
 
     /// Called with (old name, new name) when the browser renames a profile.
@@ -42,6 +44,7 @@ final class ProfilesMonitor: ObservableObject {
         guard browser != self.browser else { return }
         self.browser = browser
         lastModified = nil
+        firefoxDatabase = nil
         localStateProfiles = []
         profiles = []
         availableNames = []
@@ -55,12 +58,25 @@ final class ProfilesMonitor: ObservableObject {
         guard Browsers.adapter(for: browser).canReadProfilesSilently else { return profiles }
 
         let url = browser.profileListFile()
-        let modified = (try? FileManager.default.attributesOfItem(atPath: url.path))?[.modificationDate] as? Date
+        // Firefox's profile manager keeps names in its group database (and its WAL), so a rename
+        // there changes those files, not profiles.ini.
+        var watched = [url]
+        if browser == .firefox, let database = firefoxDatabase {
+            watched += [database, URL(fileURLWithPath: database.path + "-wal")]
+        }
+        let modified = watched
+            .compactMap { (try? FileManager.default.attributesOfItem(atPath: $0.path))?[.modificationDate] as? Date }
+            .max()
         guard modified != lastModified || profiles.isEmpty else { return profiles }
         lastModified = modified
 
         guard let data = try? Data(contentsOf: url) else { return profiles }
-        let fresh = browser.profiles(fromProfileList: data)
+        var group: [FirefoxProfiles.GroupProfile] = []
+        if browser == .firefox {
+            firefoxDatabase = FirefoxGroupReader.databaseFile(profilesINI: String(decoding: data, as: UTF8.self), browser: browser)
+            group = firefoxDatabase.map(FirefoxGroupReader.profiles(in:)) ?? []
+        }
+        let fresh = browser.profiles(fromProfileList: data, firefoxGroup: group)
         guard !fresh.isEmpty else { return profiles }
 
         for rename in ChromiumLocalState.renames(from: localStateProfiles, to: fresh) {
