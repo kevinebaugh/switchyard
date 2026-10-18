@@ -379,13 +379,12 @@ struct SupportCard: View {
                     Button("Support…") { support.openCheckout() }
                         .controlSize(.small)
                         .buttonStyle(.borderedProminent)
-                        .tint(.pink)
                 }
             }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(.pink.opacity(0.06))
+        .background(Color.accentColor.opacity(0.06))
     }
 }
 
