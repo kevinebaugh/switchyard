@@ -34,9 +34,24 @@ enum RulesLocation: String, CaseIterable, Identifiable {
         }
         return switch self {
         case .iCloud: providerRoot.appendingPathComponent("Switchyard")
-        case .dropbox: providerRoot.appendingPathComponent("Apps/Switchyard")
+        // Not Dropbox/Apps: that's Dropbox's own app-folder area, and when it's excluded with
+        // Selective Sync, Dropbox moves anything created there aside ("Apps (Selective Sync
+        // Conflict)"), taking the rules with it.
+        case .dropbox: providerRoot.appendingPathComponent("Switchyard")
         case .local: AppEnvironment.dataDirectory
         }
+    }
+
+    /// Rules files from earlier versions' folders for this location, to merge in once:
+    /// Dropbox/Apps/Switchyard and any copies Dropbox moved aside as Selective Sync conflicts.
+    var legacyRulesFiles: [URL] {
+        guard self == .dropbox, !AppEnvironment.isIsolated else { return [] }
+        // Check the known names rather than listing the Dropbox folder: a listing makes Dropbox
+        // enumerate everything (online-only folders included) and can take minutes.
+        let names = ["Apps", "Apps (Selective Sync Conflict)"] + (1...30).map { "Apps (Selective Sync Conflict \($0))" }
+        return names
+            .map { providerRoot.appendingPathComponent($0).appendingPathComponent("Switchyard/rules.json") }
+            .filter { FileManager.default.fileExists(atPath: $0.path) }
     }
 
     var rulesFile: URL {

@@ -86,7 +86,7 @@ Switchyard updates itself with [Sparkle](https://sparkle-project.org). It checks
 
 ## Syncing rules between Macs
 
-Rules live in `rules.json` in a folder you choose: **iCloud Drive** (the default when it's enabled), **Dropbox**, or **this Mac only**.
+Rules live in `rules.json` in a folder you choose: **iCloud Drive** (`Switchyard` in iCloud Drive, the default when it's enabled), **Dropbox** (`Dropbox/Switchyard`), or **this Mac only**.
 - Rules name profiles by *name* (and browser), not by the browser's folder, so they work on a Mac where the folders differ.
 - Every write merges with what's on disk: the newer edit wins, and deletions are tombstones. Two Macs editing at once don't lose or resurrect rules.
 - History and the API key stay local.

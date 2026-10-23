@@ -52,6 +52,18 @@ final class Router: ObservableObject {
             try? await Task.sleep(for: .seconds(3))
             await profiles.refreshVisibleOrder(using: browser)
         }
+        // Rules Recent points to but the rule set lacks (lost to a moved sync folder) come back
+        // when the history pins them down. Deleted rules keep their tombstones, so they stay deleted.
+        // Runs after any earlier rules folders are merged in, so it only rebuilds what's still missing.
+        let restoreFromHistory = { [weak self] in
+            guard let self else { return }
+            rules.restore(RuleRecovery.rebuild(
+                from: history.records,
+                existing: Set(rules.ruleSet.rules.map(\.id)),
+                browser: settings.browser
+            ))
+        }
+        if rules.legacyImportFinished { restoreFromHistory() } else { rules.onLegacyImport = restoreFromHistory }
         connectivity.onUnreachable = { [weak self] in self?.outageNotified = false }
         connectivity.onRecovered = { [weak self] in
             Task { await self?.catchUp() }

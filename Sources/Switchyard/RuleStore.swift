@@ -103,6 +103,13 @@ final class RuleStore: ObservableObject {
         attach()
     }
 
+    /// Put back rules rebuilt from history (see `RuleRecovery`), merged like any other edit.
+    func restore(_ rules: [Rule]) {
+        guard !rules.isEmpty else { return }
+        mutate { $0 = RuleSet.merge($0, RuleSet(rules: rules)) }
+        log.info("Restored \(rules.count, privacy: .public) rules from Recent's history")
+    }
+
     private func mutate<T>(_ body: (inout RuleSet) -> T) -> T {
         var set = RuleSet.merge(ruleSet, readDisk())
         let result = body(&set)
@@ -127,7 +134,47 @@ final class RuleStore: ObservableObject {
         self.presenter = presenter
         reload()
         if !FileManager.default.fileExists(atPath: fileURL.path) { write(ruleSet) }
+        importLegacyRules()
     }
+
+    /// Merge rules left in an earlier version's folder for this location (see
+    /// `RulesLocation.legacyRulesFiles`). Merging is by rule, newest edit wins and deletions
+    /// stick, so it's safe to repeat; the files themselves are left alone.
+    ///
+    /// Off the main thread: listing a cloud folder can wait on the provider (or on a macOS
+    /// permission prompt), and links must keep routing meanwhile. `onDone` runs afterwards on
+    /// the main actor, so history-based recovery sees the merged rules.
+    private func importLegacyRules() {
+        let location = location
+        Task.detached(priority: .utility) {
+            let sets = location.legacyRulesFiles.compactMap { url -> RuleSet? in
+                guard let data = try? Data(contentsOf: url),
+                      let legacy = try? Self.legacyDecoder().decode(RuleSet.self, from: data),
+                      legacy.isSafeToWrite, !legacy.rules.isEmpty else { return nil }
+                return legacy
+            }
+            await MainActor.run {
+                guard location == self.location else { return }
+                let count = sets.reduce(0) { $0 + $1.rules.count }
+                if count > 0 {
+                    self.mutate { set in set = sets.reduce(set) { RuleSet.merge($0, $1) } }
+                    log.info("Merged \(count, privacy: .public) rules from earlier rules folders")
+                }
+                self.legacyImportFinished = true
+                self.onLegacyImport?()
+            }
+        }
+    }
+
+    nonisolated private static func legacyDecoder() -> JSONDecoder {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return decoder
+    }
+
+    /// Whether the one-time look at earlier rules folders has finished (see `importLegacyRules`).
+    private(set) var legacyImportFinished = false
+    var onLegacyImport: (() -> Void)?
 
     private func detach() {
         if let presenter { NSFileCoordinator.removeFilePresenter(presenter) }

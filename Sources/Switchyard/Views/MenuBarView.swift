@@ -113,7 +113,7 @@ struct ProfileChip: View {
     @Environment(\.colorScheme) private var colorScheme
     let name: String
 
-    private static let palette: [Color] = [.blue, .orange, .purple, .green, .pink, .teal, .indigo, .brown]
+    static let palette: [Color] = [.blue, .orange, .purple, .green, .pink, .teal, .indigo, .brown]
 
     static func color(_ rgb: ProfileColor.RGB) -> Color {
         Color(.sRGB, red: rgb.red, green: rgb.green, blue: rgb.blue)
