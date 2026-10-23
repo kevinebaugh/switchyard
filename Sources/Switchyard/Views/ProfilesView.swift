@@ -97,8 +97,9 @@ struct ProfilesView: View {
     }
 }
 
-/// A profile's description, edited in place. Every keystroke is stored; Return (or a pause in
-/// typing) confirms it with `onSaved` and Return leaves the field. Option-Return adds a line.
+/// A profile's description, edited in place. Every change is stored as it's typed; Return (or a
+/// pause in typing) confirms it with `onSaved`, but only if something actually changed. Return
+/// also leaves the field; Option-Return adds a line.
 /// Shared by setup and the Profiles tab.
 struct ProfileDescriptionEditor: View {
     // Not an environment object: setup's window doesn't provide one.
@@ -108,13 +109,17 @@ struct ProfileDescriptionEditor: View {
 
     @FocusState private var focused: Bool
     @State private var pause: Task<Void, Never>?
+    /// Changed since "Saved" was last shown: only then is there anything to confirm.
+    @State private var unconfirmed = false
 
     var body: some View {
         TextField(
             text: Binding(
                 get: { settings.description(for: name) },
                 set: { newValue in
+                    guard newValue != settings.description(for: name) else { return }
                     settings.setDescription(newValue, for: name)
+                    unconfirmed = true
                     confirmAfterPause()
                 }
             ),
@@ -133,7 +138,7 @@ struct ProfileDescriptionEditor: View {
         .onSubmit {
             pause?.cancel()
             focused = false
-            onSaved?()
+            confirm()
         }
         .padding(8)
         .background(.background, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
@@ -148,8 +153,14 @@ struct ProfileDescriptionEditor: View {
         pause = Task {
             try? await Task.sleep(for: .milliseconds(900))
             guard !Task.isCancelled else { return }
-            onSaved?()
+            confirm()
         }
+    }
+
+    private func confirm() {
+        guard unconfirmed else { return }
+        unconfirmed = false
+        onSaved?()
     }
 }
 
