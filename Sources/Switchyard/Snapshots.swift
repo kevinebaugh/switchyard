@@ -19,6 +19,7 @@ enum Snapshots {
         renderRecent(to: directory)
         renderRules(to: directory)
         renderSupport(to: directory)
+        renderProfiles(to: directory)
 
         for step in OnboardingModel.Step.allCases {
             for variant in variants(for: step) {
@@ -146,6 +147,23 @@ enum Snapshots {
         default:
             [Variant()]
         }
+    }
+
+    /// The Profiles tab, with the menu's header, made-up descriptions and one left empty.
+    static func renderProfiles(to directory: URL) {
+        let settings = AppSettings.shared
+        settings.setDescription("Acme Corp: me@acme.com Google Workspace, Acme's Slack and Linear, the acme GitHub org.", for: "Work")
+        settings.setDescription("Everything else: personal email, shopping, news, side projects.", for: "Personal")
+        settings.setDescription("", for: "Test")
+        MenuNavigation.shared.tab = .profiles
+        let menu = MenuBarView()
+            .environmentObject(Router.shared)
+            .environmentObject(HistoryStore.shared)
+            .environmentObject(RuleStore.shared)
+            .environmentObject(RuleUsageStore.shared)
+            .environmentObject(settings)
+        writeBothAppearances(menu, size: NSSize(width: 460, height: 600), to: directory, name: "menu-profiles")
+        MenuNavigation.shared.tab = .recent
     }
 
     /// The support reminder card at the top of Recent.

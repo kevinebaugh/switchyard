@@ -36,7 +36,7 @@ You pick one browser during setup. Rules remember which browser they're for, so 
    - an identifying query parameter (`mail.google.com ?authuser=…`)
 3. **App rules.** A rule like "links from Slack → Work" routes every link clicked in that app. It beats rules Jev learned, but rules you made or corrected still win.
 4. **Otherwise, ask Jev.** One request, usually answered in 70–500 ms, asks two questions at once:
-   - Which profile should open this link? The options are your browser's profiles, described in Settings.
+   - Which profile should open this link? The options are your browser's profiles, with the descriptions from the Profiles tab.
    - Which part of the URL identifies the account? The answers are domain, subdomain, first path segment, query identifier, or "can't generalize".
    - Only the host, the first three path segments and the *names* of any query parameters are sent. Query values and fragments stay on your Mac, so a rule like `mail.google.com ?authuser=…` keeps its value and is matched locally.
 5. **Decide.** What happens depends on Jev's confidence:
@@ -64,10 +64,10 @@ The browser is the source of truth for profiles: they're read from its `Local St
   - After 3 links in a row from one app land in the same profile, Recent offers to make an app rule ("Always open links from Slack in Work?").
   - The ↪︎ menu on each row is **"Should have opened in…"**. It lists every scope that URL supports (all of the domain, the exact host, one or two path segments, the account parameter, or every link from the app it came from) or "just this once". The link re-opens in the right profile and the rule is saved, replacing any rule with the same scope. **"… was right: remember"** saves a rule for the profile it's already in.
 - **Rules**: most recently used first, with profile filters. Each rule shows whether Jev learned it or it's yours, and when it last fired. Rules unused for 90 days fade to the bottom. One field searches, and it offers to add what you typed if it's a new rule (`app.shortcut.com/acme`, `*.slack.com`, `mail.google.com?authuser=me@x.com`). Usage is tracked on each Mac, not in the synced rules file.
+- **Profiles**: what each profile is for, which is what Jev reads, edited in place, with each profile's rule count and the fallback profile for when Jev is unsure or offline. Every Recent row's menu links here (**Edit What Each Profile Is For…**), since a wrong pick is usually the moment to sharpen a description.
 - **Settings**:
   - the TypeSafe API key (stored in Keychain)
-  - the confidence threshold and fallback profile
-  - a description of each profile, which is what Jev reads
+  - the confidence threshold
   - a **Test** field that shows a decision without opening anything
   - the rules folder, default browser, open at login, and notifications
 
@@ -132,7 +132,7 @@ After setup, opening Switchyard (launching it, or opening it again while it's ru
 
 ### Describe your profiles
 
-Jev knows only what your descriptions say, so they're the most important setting. Name the accounts and tools each profile is signed in to. For example:
+Jev knows only what your descriptions say, so they're the most important setting. Edit them any time in the menu's **Profiles** tab. Name the accounts and tools each profile is signed in to. For example:
 
 | Profile | Description |
 | --- | --- |

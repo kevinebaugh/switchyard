@@ -6,6 +6,7 @@ struct MenuBarView: View {
     enum Tab: String, CaseIterable, Identifiable {
         case recent = "Recent"
         case rules = "Rules"
+        case profiles = "Profiles"
         case settings = "Settings"
 
         var id: String { rawValue }
@@ -13,7 +14,7 @@ struct MenuBarView: View {
 
     @EnvironmentObject private var router: Router
     @EnvironmentObject private var settings: AppSettings
-    @State private var tab: Tab = .recent
+    @ObservedObject private var navigation = MenuNavigation.shared
 
     var body: some View {
         VStack(spacing: 0) {
@@ -31,12 +32,12 @@ struct MenuBarView: View {
                         .foregroundStyle(.orange)
                 }
                 Spacer()
-                Picker("", selection: $tab) {
+                Picker("", selection: $navigation.tab) {
                     ForEach(Tab.allCases) { Text($0.rawValue).tag($0) }
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
-                .frame(width: 240)
+                .frame(width: 300)
             }
             .padding(12)
 
@@ -63,9 +64,10 @@ struct MenuBarView: View {
             }
 
             Group {
-                switch tab {
+                switch navigation.tab {
                 case .recent: RecentView()
                 case .rules: RulesView()
+                case .profiles: ProfilesView()
                 case .settings: SettingsView()
                 }
             }
@@ -310,6 +312,7 @@ struct RecentRow: View {
         Button("Open again in \(currentProfile)") {
             Task { await router.openAgain(recordID: record.id) }
         }
+        Button("Edit What Each Profile Is For…") { MenuNavigation.shared.tab = .profiles }
         Button("Copy URL") {
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(record.url.absoluteString, forType: .string)

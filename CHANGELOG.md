@@ -2,6 +2,10 @@
 
 All notable changes to Switchyard. Versions follow [Semantic Versioning](https://semver.org).
 
+## [Unreleased]
+
+- A Profiles tab for what each profile is for (what Jev reads), with each profile's rule count and the fallback profile. It's also reachable from any Recent row's menu: **Edit What Each Profile Is For…**.
+
 ## [0.9.6] - 2026-10-18
 
 - The support reminder uses calm accent colours instead of red.

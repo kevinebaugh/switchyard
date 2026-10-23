@@ -44,11 +44,8 @@ struct SettingsView: View {
                             .frame(width: 34)
                     }
                 }
-                Picker("When unsure or offline", selection: $settings.fallbackProfileName) {
-                    ForEach(profiles.names, id: \.self) { Text($0).tag($0) }
-                    if !profiles.names.contains(settings.fallbackProfileName) {
-                        Text(settings.fallbackProfileName).tag(settings.fallbackProfileName)
-                    }
+                LabeledContent("Profile descriptions") {
+                    Button("Edit in Profiles") { MenuNavigation.shared.tab = .profiles }
                 }
             }
 
@@ -64,36 +61,6 @@ struct SettingsView: View {
                         .font(.caption.monospaced())
                         .textSelection(.enabled)
                 }
-            }
-
-            Section {
-                ForEach(profiles.names, id: \.self) { name in
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack {
-                            ProfileChip(name: name)
-                            Spacer()
-                            if !ProfileDefaults.description(for: name).isEmpty,
-                               settings.description(for: name) != ProfileDefaults.description(for: name) {
-                                Button("Reset") { settings.setDescription(ProfileDefaults.description(for: name), for: name) }
-                                    .controlSize(.small)
-                            }
-                        }
-                        TextEditor(text: Binding(
-                            get: { settings.description(for: name) },
-                            set: { settings.setDescription($0, for: name) }
-                        ))
-                        .font(.callout)
-                        .frame(height: 64)
-                        .scrollContentBackground(.hidden)
-                        .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 6))
-                    }
-                }
-            } header: {
-                Text("What each profile is for")
-            } footer: {
-                Text("Profiles come from \(settings.browser.displayName). Jev reads these descriptions to decide.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
 
             Section("Rules sync") {

@@ -410,27 +410,7 @@ private struct ProfilesStep: View {
                     ForEach(model.profiles, id: \.self) { name in
                         VStack(alignment: .leading, spacing: 6) {
                             ProfileChip(name: name)
-                            ZStack(alignment: .topLeading) {
-                                TextEditor(text: Binding(
-                                    get: { settings.description(for: name) },
-                                    set: { settings.setDescription($0, for: name) }
-                                ))
-                                .font(.callout)
-                                .scrollContentBackground(.hidden)
-                                .padding(6)
-                                if settings.description(for: name).isEmpty {
-                                    // verbatim: don't turn the example email into a link.
-                                    Text(verbatim: "e.g. \"Acme Corp: you@acme.com Google Workspace, Acme's Slack and Linear, the acme GitHub org.\"")
-                                        .font(.callout)
-                                        .foregroundStyle(.tertiary)
-                                        .padding(.horizontal, 11)
-                                        .padding(.vertical, 6)
-                                        .allowsHitTesting(false)
-                                }
-                            }
-                            .frame(height: 64)
-                            .background(.background, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
-                            .overlay(RoundedRectangle(cornerRadius: 7, style: .continuous).strokeBorder(.quaternary))
+                            ProfileDescriptionEditor(name: name)
                         }
                     }
                 }
