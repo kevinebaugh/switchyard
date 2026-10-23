@@ -2,7 +2,7 @@
 
 All notable changes to Switchyard. Versions follow [Semantic Versioning](https://semver.org).
 
-## [Unreleased]
+## [0.9.7] - 2026-10-23
 
 - **Fixes lost rules for Dropbox users.** Rules were kept in Dropbox's `Apps` folder, and when that folder is excluded with Selective Sync, Dropbox moves anything written there aside ("Apps (Selective Sync Conflict)"), taking the rules with it. Rules now live in `Dropbox/Switchyard`. On first launch, Switchyard merges in the old folder and any moved-aside copies, and rebuilds rules that Recent still points to from its history.
 - Editing a profile description: Return saves (Option-Return adds a line) and a "Saved" check confirms it. Each profile's name and colour are easier to read.
