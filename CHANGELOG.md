@@ -2,6 +2,13 @@
 
 All notable changes to Switchyard. Versions follow [Semantic Versioning](https://semver.org).
 
+## [Unreleased]
+
+- **Your data across versions, in writing:** [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md). Rules files from every format are now read in tests on every build.
+- **Copy Diagnostics** (Settings → System) for bug reports. It contains no links, profile names or keys. The README has a Troubleshooting section, and GitHub has issue templates.
+- **Support syncs between your Macs.** After a payment, your other Macs stop reminding you too. If you paid but still see reminders, Settings → Support links to a short form.
+- **VoiceOver:** icon-only buttons have labels, profile chips say what they are, and setup reports which browser is selected.
+
 ## [0.9.10] - 2026-10-28
 
 - **Works without a TypeSafe key.** For a site Switchyard doesn't know yet, a small picker appears by the cursor: press 1, 2, 3… (or click) to choose the profile, or Esc for your default. "Always for …" saves your answer as a rule, so each site is asked about once, and three picks in a row from one app offer an app rule. Setup's Jev step can be skipped.

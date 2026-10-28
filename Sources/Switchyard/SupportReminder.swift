@@ -63,7 +63,53 @@ final class SupportReminder: ObservableObject {
         if let checkoutSession { defaults.set(checkoutSession, forKey: SettingsKey.supportCheckoutSession.rawValue) }
         isSupporter = true
         isShowingCard = false
+        if checkoutSession != nil { syncWithOtherMacs() }
     }
+
+    // MARK: Other Macs
+
+    /// `supporter.json` beside rules.json in the sync folder: the checkout session that proved a
+    /// payment, so your other Macs stop reminding too. Each Mac re-checks the session's shape
+    /// (a little friction, not a lock). "I've already supported" has no session, so it stays on
+    /// that Mac.
+    private struct SharedSupport: Codable {
+        var session: String
+        var since: Date
+    }
+
+    static let supportFileName = "supporter.json"
+
+    /// Share this Mac's payment, or pick up one from another Mac. Off the main thread: the sync
+    /// folder may be a cloud folder that's slow to answer.
+    func syncWithOtherMacs() {
+        guard isEnabled, !AppEnvironment.isSnapshot else { return }
+        let file = AppSettings.shared.rulesLocation.directory.appendingPathComponent(Self.supportFileName)
+        let saved = defaults.string(forKey: SettingsKey.supportCheckoutSession.rawValue)
+        let allowTest = AppEnvironment.isRehearsal
+        let alreadySupporter = isSupporter
+        Task.detached(priority: .utility) {
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            let shared = (try? Data(contentsOf: file)).flatMap { try? decoder.decode(SharedSupport.self, from: $0) }
+            let sharedIsValid = shared.map { SupportNudge.isCheckoutSessionID($0.session, allowTest: allowTest) } ?? false
+
+            if !sharedIsValid, let saved, SupportNudge.isCheckoutSessionID(saved, allowTest: allowTest) {
+                let encoder = JSONEncoder()
+                encoder.dateEncodingStrategy = .iso8601
+                encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+                if let data = try? encoder.encode(SharedSupport(session: saved, since: Date())) {
+                    try? data.write(to: file, options: .atomic)
+                }
+            } else if !alreadySupporter, sharedIsValid, let session = shared?.session {
+                await MainActor.run { SupportReminder.shared.markSupported(checkoutSession: session) }
+            }
+        }
+    }
+
+    /// A pre-filled GitHub issue for someone who paid but still sees reminders (say, they paid
+    /// on another device). Asks only for the date and amount, which are enough to find the
+    /// payment in Stripe; never an email address.
+    static let paidButStillSeeingURL = URL(string: "https://github.com/kevinebaugh/switchyard/issues/new?template=supporter.yml")!
 
     /// Snapshots only: a made-up count, so the card renders as it would after a while.
     func showForSnapshot(routedLinks: Int) {

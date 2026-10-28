@@ -1,0 +1,22 @@
+name: I paid but still see support reminders
+description: Supported Switchyard, but the reminders didn't turn off (for example, you paid on another device).
+labels: [support]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for supporting Switchyard! Please don't include your email address or card details here: the date and amount are enough to find your payment. Kevin will reply with a link that turns the reminders off.
+  - type: input
+    id: when
+    attributes:
+      label: When did you pay?
+      placeholder: e.g. 2026-11-03
+    validations:
+      required: true
+  - type: input
+    id: amount
+    attributes:
+      label: How much?
+      placeholder: e.g. $10
+    validations:
+      required: true

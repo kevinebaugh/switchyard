@@ -68,6 +68,7 @@ final class Router: ObservableObject {
             ))
         }
         if rules.legacyImportFinished { restoreFromHistory() } else { rules.onLegacyImport = restoreFromHistory }
+        SupportReminder.shared.syncWithOtherMacs()
         connectivity.onUnreachable = { [weak self] in self?.outageNotified = false }
         connectivity.onRecovered = { [weak self] in
             Task { await self?.catchUp() }
@@ -103,6 +104,7 @@ final class Router: ObservableObject {
 
     func menuOpened() {
         acknowledgedAt = Date()
+        SupportReminder.shared.syncWithOtherMacs()
         refreshAttention()
         profiles.refresh()
         Task { await profiles.refreshVisibleOrder(using: browser) }

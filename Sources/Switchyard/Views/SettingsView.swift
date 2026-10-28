@@ -165,6 +165,11 @@ struct SettingsView: View {
                                 Image(systemName: "leaf.fill").foregroundStyle(.green)
                             }
                             Spacer()
+                        }
+                        .font(.caption)
+                        HStack {
+                            Link("Paid but still seeing reminders?", destination: SupportReminder.paidButStillSeeingURL)
+                            Spacer()
                             Button("I've already supported") { support.markSupported() }
                                 .buttonStyle(.link)
                         }
