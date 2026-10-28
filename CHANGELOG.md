@@ -2,7 +2,9 @@
 
 All notable changes to Switchyard. Versions follow [Semantic Versioning](https://semver.org).
 
-## [Unreleased]
+## [1.0.0] - 2026-10-28
+
+Switchyard 1.0: safe to depend on. Your rules survive every update and sync safely between Macs on different versions, it works with or without a TypeSafe key, and problems are easy to report.
 
 - **Your data across versions, in writing:** [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md). Rules files from every format are now read in tests on every build.
 - **Copy Diagnostics** (Settings → System) for bug reports. It contains no links, profile names or keys. The README has a Troubleshooting section, and GitHub has issue templates.
