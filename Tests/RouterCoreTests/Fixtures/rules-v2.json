@@ -1,0 +1,48 @@
+{
+  "rules" : [
+    {
+      "browser" : "dia",
+      "deleted" : false,
+      "host" : "",
+      "hostMatch" : "exact",
+      "id" : "33333333-3333-3333-3333-333333333333",
+      "origin" : "manual",
+      "profileName" : "Work",
+      "sourceApp" : { "bundleID" : "com.tinyspeck.slackmacgap", "name" : "Slack" },
+      "updatedAt" : "2026-10-02T09:00:00Z"
+    },
+    {
+      "browser" : "chrome",
+      "deleted" : false,
+      "host" : "mail.google.com",
+      "hostMatch" : "exact",
+      "id" : "44444444-4444-4444-4444-444444444444",
+      "origin" : "corrected",
+      "profileName" : "Personal",
+      "query" : { "authuser" : "me@example.com" },
+      "updatedAt" : "2026-10-02T09:01:00Z"
+    },
+    {
+      "browser" : "firefox",
+      "deleted" : false,
+      "host" : "app.example-tracker.com",
+      "hostMatch" : "exact",
+      "id" : "55555555-5555-5555-5555-555555555555",
+      "origin" : "learned",
+      "pathPrefix" : "/acme",
+      "profileName" : "Work",
+      "updatedAt" : "2026-10-09T09:02:00Z"
+    },
+    {
+      "browser" : "dia",
+      "deleted" : true,
+      "host" : "old.example",
+      "hostMatch" : "domain",
+      "id" : "66666666-6666-6666-6666-666666666666",
+      "origin" : "learned",
+      "profileName" : "Personal",
+      "updatedAt" : "2026-10-20T09:03:00Z"
+    }
+  ],
+  "version" : 2
+}

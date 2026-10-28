@@ -17,14 +17,14 @@ final class SupportReminder: ObservableObject {
     static let climateNote = "1% goes to removing carbon from the atmosphere."
 
     @Published private(set) var isSupporter: Bool {
-        didSet { defaults.set(isSupporter, forKey: "isSupporter") }
+        didSet { defaults.set(isSupporter, forKey: SettingsKey.isSupporter.rawValue) }
     }
     /// Show the card in Recent. Set when a reminder comes due; cleared by any button on it.
     @Published private(set) var isShowingCard: Bool {
-        didSet { defaults.set(isShowingCard, forKey: "supportCardShowing") }
+        didSet { defaults.set(isShowingCard, forKey: SettingsKey.supportCardShowing.rawValue) }
     }
     private(set) var state: SupportNudge.State {
-        didSet { if let data = try? JSONEncoder().encode(state) { defaults.set(data, forKey: "supportNudge") } }
+        didSet { if let data = try? JSONEncoder().encode(state) { defaults.set(data, forKey: SettingsKey.supportNudge.rawValue) } }
     }
 
     var routedLinks: Int { state.routedLinks }
@@ -33,9 +33,9 @@ final class SupportReminder: ObservableObject {
     private let defaults = AppEnvironment.defaults
 
     private init() {
-        isSupporter = defaults.bool(forKey: "isSupporter")
-        isShowingCard = defaults.bool(forKey: "supportCardShowing")
-        state = defaults.data(forKey: "supportNudge").flatMap { try? JSONDecoder().decode(SupportNudge.State.self, from: $0) }
+        isSupporter = defaults.bool(forKey: SettingsKey.isSupporter.rawValue)
+        isShowingCard = defaults.bool(forKey: SettingsKey.supportCardShowing.rawValue)
+        state = defaults.data(forKey: SettingsKey.supportNudge.rawValue).flatMap { try? JSONDecoder().decode(SupportNudge.State.self, from: $0) }
             ?? SupportNudge.State()
     }
 
@@ -60,7 +60,7 @@ final class SupportReminder: ObservableObject {
     /// From `switchyard://supported?session=…` (the thank-you page) or "I've already supported".
     /// The session ID is kept only as a local record of the payment.
     func markSupported(checkoutSession: String? = nil) {
-        if let checkoutSession { defaults.set(checkoutSession, forKey: "supportCheckoutSession") }
+        if let checkoutSession { defaults.set(checkoutSession, forKey: SettingsKey.supportCheckoutSession.rawValue) }
         isSupporter = true
         isShowingCard = false
     }

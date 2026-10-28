@@ -76,7 +76,7 @@ final class ProfilesMonitor: ObservableObject {
     /// The browser's own profile order, when it can report one (Dia's scripting interface
     /// can; Local State doesn't store it). Remembered per browser.
     private var visibleOrderKey: String {
-        browser == .dia ? "diaProfileOrder" : "profileOrder.\(browser.rawValue)"
+        browser == .dia ? SettingsKey.diaProfileOrder.rawValue : SettingsKey.profileOrder(browser.rawValue)
     }
 
     private var visibleOrder: [String] {

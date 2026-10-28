@@ -75,51 +75,51 @@ final class AppSettings: ObservableObject {
 
     /// The browser links open in. Installs from before multi-browser support are Dia.
     @Published var browser: BrowserKind {
-        didSet { defaults.set(browser.rawValue, forKey: "browser") }
+        didSet { defaults.set(browser.rawValue, forKey: SettingsKey.browser.rawValue) }
     }
 
     @Published var rulesLocation: RulesLocation {
-        didSet { defaults.set(rulesLocation.rawValue, forKey: "rulesLocation") }
+        didSet { defaults.set(rulesLocation.rawValue, forKey: SettingsKey.rulesLocation.rawValue) }
     }
 
     @Published var profileThreshold: Double {
-        didSet { defaults.set(profileThreshold, forKey: "profileThreshold") }
+        didSet { defaults.set(profileThreshold, forKey: SettingsKey.profileThreshold.rawValue) }
     }
 
     @Published var fallbackProfileName: String {
-        didSet { defaults.set(fallbackProfileName, forKey: "fallbackProfileName") }
+        didSet { defaults.set(fallbackProfileName, forKey: SettingsKey.fallbackProfileName.rawValue) }
     }
 
     @Published var notificationsEnabled: Bool {
-        didSet { defaults.set(notificationsEnabled, forKey: "notificationsEnabled") }
+        didSet { defaults.set(notificationsEnabled, forKey: SettingsKey.notificationsEnabled.rawValue) }
     }
 
     @Published var notifyLowConfidence: Bool {
-        didSet { defaults.set(notifyLowConfidence, forKey: "notifyLowConfidence") }
+        didSet { defaults.set(notifyLowConfidence, forKey: SettingsKey.notifyLowConfidence.rawValue) }
     }
 
     @Published var onboardingCompleted: Bool {
-        didSet { defaults.set(onboardingCompleted, forKey: "onboardingCompleted") }
+        didSet { defaults.set(onboardingCompleted, forKey: SettingsKey.onboardingCompleted.rawValue) }
     }
 
     /// Jev criteria per profile, keyed by lowercased profile name. Missing = seeded default.
     @Published private(set) var profileDescriptions: [String: String] {
-        didSet { defaults.set(profileDescriptions, forKey: "profileDescriptions") }
+        didSet { defaults.set(profileDescriptions, forKey: SettingsKey.profileDescriptions.rawValue) }
     }
 
     private init() {
-        browser = defaults.string(forKey: "browser").flatMap(BrowserKind.init(rawValue:)) ?? .dia
-        rulesLocation = defaults.string(forKey: "rulesLocation").flatMap(RulesLocation.init(rawValue:))
+        browser = defaults.string(forKey: SettingsKey.browser.rawValue).flatMap(BrowserKind.init(rawValue:)) ?? .dia
+        rulesLocation = defaults.string(forKey: SettingsKey.rulesLocation.rawValue).flatMap(RulesLocation.init(rawValue:))
             ?? RulesLocation.automatic
-        profileThreshold = defaults.object(forKey: "profileThreshold") as? Double ?? DecisionPolicy.defaultProfileThreshold
-        fallbackProfileName = defaults.string(forKey: "fallbackProfileName") ?? ProfileDefaults.fallbackProfileName
-        notificationsEnabled = defaults.object(forKey: "notificationsEnabled") as? Bool ?? true
-        notifyLowConfidence = defaults.object(forKey: "notifyLowConfidence") as? Bool ?? false
-        profileDescriptions = defaults.dictionary(forKey: "profileDescriptions") as? [String: String] ?? [:]
-        onboardingCompleted = defaults.bool(forKey: "onboardingCompleted")
+        profileThreshold = defaults.object(forKey: SettingsKey.profileThreshold.rawValue) as? Double ?? DecisionPolicy.defaultProfileThreshold
+        fallbackProfileName = defaults.string(forKey: SettingsKey.fallbackProfileName.rawValue) ?? ProfileDefaults.fallbackProfileName
+        notificationsEnabled = defaults.object(forKey: SettingsKey.notificationsEnabled.rawValue) as? Bool ?? true
+        notifyLowConfidence = defaults.object(forKey: SettingsKey.notifyLowConfidence.rawValue) as? Bool ?? false
+        profileDescriptions = defaults.dictionary(forKey: SettingsKey.profileDescriptions.rawValue) as? [String: String] ?? [:]
+        onboardingCompleted = defaults.bool(forKey: SettingsKey.onboardingCompleted.rawValue)
 
         // Persist the automatic choice so the rules file doesn't move if another provider appears later.
-        defaults.set(rulesLocation.rawValue, forKey: "rulesLocation")
+        defaults.set(rulesLocation.rawValue, forKey: SettingsKey.rulesLocation.rawValue)
     }
 
     /// Jev's profile criteria: each profile with its current description.

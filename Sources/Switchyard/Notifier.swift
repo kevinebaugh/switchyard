@@ -117,7 +117,7 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         center.add(UNNotificationRequest(identifier: record.id.uuidString, content: content, trigger: nil))
     }
 
-    private static let rejectedKeyDefaultsKey = "rejectedKeyFingerprint"
+    private static let rejectedKeyDefaultsKey = SettingsKey.rejectedKeyFingerprint.rawValue
 
     /// TypeSafe rejected the key. Says so once per key (not hourly): the fingerprint, never the
     /// key, is remembered, so saving a new key starts fresh. Returns true if this was news.

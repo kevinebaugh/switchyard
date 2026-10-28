@@ -426,7 +426,7 @@ final class Router: ObservableObject {
 
     // MARK: App-rule suggestions
 
-    private static let dismissedSuggestionsKey = "dismissedAppRuleSuggestions"
+    private static let dismissedSuggestionsKey = SettingsKey.dismissedAppRuleSuggestions.rawValue
 
     private var dismissedSuggestions: Set<String> {
         get { Set(AppEnvironment.defaults.stringArray(forKey: Self.dismissedSuggestionsKey) ?? []) }

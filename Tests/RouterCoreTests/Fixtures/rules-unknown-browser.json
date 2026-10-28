@@ -1,0 +1,25 @@
+{
+  "rules" : [
+    {
+      "browser" : "dia",
+      "deleted" : false,
+      "host" : "example.com",
+      "hostMatch" : "domain",
+      "id" : "88888888-8888-8888-8888-888888888888",
+      "origin" : "learned",
+      "profileName" : "Personal",
+      "updatedAt" : "2026-10-02T09:00:00Z"
+    },
+    {
+      "browser" : "some-future-browser",
+      "deleted" : false,
+      "host" : "example.org",
+      "hostMatch" : "domain",
+      "id" : "99999999-9999-9999-9999-999999999999",
+      "origin" : "learned",
+      "profileName" : "Work",
+      "updatedAt" : "2026-10-02T09:00:00Z"
+    }
+  ],
+  "version" : 2
+}

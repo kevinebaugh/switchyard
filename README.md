@@ -92,6 +92,10 @@ Rules live in `rules.json` in a folder you choose: **iCloud Drive** (`Switchyard
 - Every write merges with what's on disk: the newer edit wins, and deletions are tombstones. Two Macs editing at once don't lose or resurrect rules.
 - History and the API key stay local.
 
+## Your data across versions
+
+Updates never lose your rules. The rules file is versioned: a Mac running an older Switchyard reads newer files but never writes them, and every new version reads every older format. Settings keep their meaning from version to version. Recent and rule usage are per-Mac caches that a future version may reset. The details, and the tests that enforce them, are in [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
+
 ## Install
 
 You'll need:

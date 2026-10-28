@@ -273,7 +273,7 @@ final class LaunchArgumentsAdapter: BrowserAdapter, @unchecked Sendable {
         self.kind = kind
     }
 
-    private var askedKey: String { "askedDataAccess.\(kind.rawValue)" }
+    private var askedKey: String { SettingsKey.askedDataAccess(kind.rawValue) }
 
     var canReadProfilesSilently: Bool {
         AppEnvironment.defaults.bool(forKey: askedKey)

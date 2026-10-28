@@ -34,7 +34,9 @@ let package = Package(
         .testTarget(
             name: "RouterCoreTests",
             dependencies: ["RouterCore"],
-            path: "Tests/RouterCoreTests"
+            path: "Tests/RouterCoreTests",
+            // Frozen rules files from each format: the compatibility promise, enforced.
+            resources: [.copy("Fixtures")]
         ),
     ]
 )
