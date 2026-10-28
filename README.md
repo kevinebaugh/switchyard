@@ -44,7 +44,7 @@ You pick one browser during setup. Rules remember which browser they're for, so 
    | Jev's answer | Result |
    | --- | --- |
    | Profile confidence ≥ 0.7 (adjustable) | Open there and save a rule at the scope Jev picked |
-   | Lower confidence | Open in Jev's top pick; nothing is saved, and the row is flagged ⚠︎ |
+   | Lower confidence | Ask with the picker, Jev's guess marked (Esc takes it); your answer can become a rule. Or, with Settings → Jev → "When Jev is unsure: Open its best guess", open the guess and flag the row ⚠︎ |
    | No key | Ask with the picker; your answer can become a rule |
    | Timeout (1.2 s), offline, or an error | Open in the fallback profile (**Personal**) and show the reason |
 

@@ -174,7 +174,14 @@ enum Snapshots {
             url: url, profiles: profiles.map(\.name), defaultProfile: "Personal",
             scopes: LinkFeatures(url: url)?.correctionOptions ?? [])
         let view = ProfilePickerView(model: ProfilePickerModel(question: question, waiting: 1) { _ in })
-        writeBothAppearances(view, size: NSSize(width: 300, height: 250), to: directory, name: "picker")
+        writeBothAppearances(view, size: NSSize(width: 330, height: 250), to: directory, name: "picker")
+
+        // Jev was unsure: its guess is marked and Esc takes it.
+        let unsure = ProfilePicker.Question(
+            url: url, profiles: profiles.map(\.name), defaultProfile: "Work", scopes: question.scopes,
+            jevGuess: ("Work", 0.56), preferredScope: question.scopes.last)
+        let guessView = ProfilePickerView(model: ProfilePickerModel(question: unsure, waiting: 0) { _ in })
+        writeBothAppearances(guessView, size: NSSize(width: 330, height: 250), to: directory, name: "picker-unsure")
     }
 
     /// The support reminder card at the top of Recent.

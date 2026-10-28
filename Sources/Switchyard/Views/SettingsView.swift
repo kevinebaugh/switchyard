@@ -49,6 +49,10 @@ struct SettingsView: View {
                             .frame(width: 34)
                     }
                 }
+                Picker("When Jev is unsure", selection: $settings.askWhenUnsure) {
+                    Text("Ask me").tag(true)
+                    Text("Open its best guess").tag(false)
+                }
                 LabeledContent("Profile descriptions") {
                     Button("Edit in Profiles") { MenuNavigation.shared.tab = .profiles }
                 }

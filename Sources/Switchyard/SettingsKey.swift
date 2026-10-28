@@ -19,6 +19,7 @@ enum SettingsKey: String, CaseIterable {
     case supportNudge
     case supportCheckoutSession
     case rejectedKeyFingerprint
+    case askWhenUnsure
 
     /// Per-browser keys: a browser's profile order (Dia's is `diaProfileOrder`, from before
     /// other browsers), and whether setup has asked for its data folder.

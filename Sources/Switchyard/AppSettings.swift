@@ -98,6 +98,12 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(notifyLowConfidence, forKey: SettingsKey.notifyLowConfidence.rawValue) }
     }
 
+    /// When Jev is unsure: ask with the picker (Jev's guess marked, Esc takes it), or just open
+    /// its guess and flag the row.
+    @Published var askWhenUnsure: Bool {
+        didSet { defaults.set(askWhenUnsure, forKey: SettingsKey.askWhenUnsure.rawValue) }
+    }
+
     @Published var onboardingCompleted: Bool {
         didSet { defaults.set(onboardingCompleted, forKey: SettingsKey.onboardingCompleted.rawValue) }
     }
@@ -117,6 +123,7 @@ final class AppSettings: ObservableObject {
         notifyLowConfidence = defaults.object(forKey: SettingsKey.notifyLowConfidence.rawValue) as? Bool ?? false
         profileDescriptions = defaults.dictionary(forKey: SettingsKey.profileDescriptions.rawValue) as? [String: String] ?? [:]
         onboardingCompleted = defaults.bool(forKey: SettingsKey.onboardingCompleted.rawValue)
+        askWhenUnsure = defaults.object(forKey: SettingsKey.askWhenUnsure.rawValue) as? Bool ?? true
 
         // Persist the automatic choice so the rules file doesn't move if another provider appears later.
         defaults.set(rulesLocation.rawValue, forKey: SettingsKey.rulesLocation.rawValue)

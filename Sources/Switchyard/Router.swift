@@ -164,12 +164,26 @@ final class Router: ObservableObject {
         // Decision time only; time spent answering the picker isn't Switchyard's.
         let milliseconds = started.duration(to: clock.now).milliseconds
 
-        // No key: ask, and remember the answer if you like.
+        // No key, or Jev unsure: ask, and remember the answer if you like.
         var pickedRuleID: UUID?
-        if case .fallback(.noAPIKey) = verdict.decision, profiles.names.count > 1 {
-            let scopes = (LinkFeatures(url: url)?.correctionOptions ?? []) + (source.map { [RuleKey.app($0)] } ?? [])
-            let question = ProfilePicker.Question(url: url, profiles: profiles.names,
+        var question: ProfilePicker.Question?
+        if profiles.names.count > 1 {
+            let features = LinkFeatures(url: url)
+            let scopes = (features?.correctionOptions ?? []) + (source.map { [RuleKey.app($0)] } ?? [])
+            switch verdict.decision {
+            case .fallback(.noAPIKey):
+                question = ProfilePicker.Question(url: url, profiles: profiles.names,
                                                   defaultProfile: verdict.profileName, scopes: scopes)
+            case let .lowConfidence(confidence) where settings.askWhenUnsure:
+                question = ProfilePicker.Question(url: url, profiles: profiles.names,
+                                                  defaultProfile: verdict.profileName, scopes: scopes,
+                                                  jevGuess: (verdict.profileName, confidence),
+                                                  preferredScope: verdict.learnScope.flatMap { features?.ruleKey(for: $0) })
+            default:
+                break
+            }
+        }
+        if let question {
             if let answer = await ProfilePicker.shared.ask(question) {
                 if let key = answer.remember {
                     pickedRuleID = rules.upsert(key: key, profileName: answer.profileName, origin: .corrected).id

@@ -2,6 +2,10 @@
 
 All notable changes to Switchyard. Versions follow [Semantic Versioning](https://semver.org).
 
+## [1.0.1] - 2026-10-28
+
+- **When Jev is unsure, Switchyard asks.** The profile picker appears with Jev's guess marked; Esc opens the guess, and "Always for …" starts at the scope Jev suggested. Prefer the old way? Settings → Jev → "When Jev is unsure: Open its best guess".
+
 ## [1.0.0] - 2026-10-28
 
 Switchyard 1.0: safe to depend on. Your rules survive every update and sync safely between Macs on different versions, it works with or without a TypeSafe key, and problems are easy to report.

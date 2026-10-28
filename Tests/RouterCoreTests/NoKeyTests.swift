@@ -52,3 +52,18 @@ import Testing
         #expect(AppRuleSuggestion.suggest(records: escapes, hasAppRule: { _ in false }, dismissed: []) == nil)
     }
 }
+
+@Suite struct UnsureVerdictTests {
+    let features = LinkFeatures(url: URL(string: "https://github.com/acme/web")!)!
+
+    @Test func anUnsureAnswerKeepsJevsScopeForThePicker() {
+        let outcome = JevOutcome(profile: "Work", profileConfidence: 0.55, scope: .firstPathSegment, scopeConfidence: 0.8)
+        let verdict = DecisionPolicy.verdict(for: outcome, features: features, knownProfiles: ["Work", "Personal"], fallbackProfile: "Personal")
+        #expect(verdict.decision == .lowConfidence(confidence: 0.55))
+        #expect(verdict.learn == nil)
+        #expect(verdict.learnScope == .firstPathSegment)
+
+        let vague = JevOutcome(profile: "Work", profileConfidence: 0.55, scope: .domain, scopeConfidence: 0.3)
+        #expect(DecisionPolicy.verdict(for: vague, features: features, knownProfiles: ["Work"], fallbackProfile: "Work").learnScope == nil)
+    }
+}

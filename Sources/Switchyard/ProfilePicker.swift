@@ -16,6 +16,10 @@ final class ProfilePicker {
         let defaultProfile: String
         /// The rules this link could save, broadest first ("all of example.com", …).
         let scopes: [RuleKey]
+        /// When Jev was asked but unsure: its guess (also the Esc choice) and confidence.
+        var jevGuess: (profile: String, confidence: Double)? = nil
+        /// The scope to preselect (Jev's, when it gave one).
+        var preferredScope: RuleKey? = nil
     }
 
     struct Answer {
@@ -106,7 +110,7 @@ final class ProfilePickerModel: ObservableObject {
         self.question = question
         self.waiting = waiting
         self.done = done
-        scope = question.scopes.first
+        scope = question.preferredScope.flatMap { question.scopes.contains($0) ? $0 : nil } ?? question.scopes.first
     }
 
     func pick(_ profile: String) {
@@ -144,6 +148,11 @@ struct ProfilePickerView: View {
                             ProfileDot(name: name)
                             Text(name)
                             Spacer()
+                            if let guess = model.question.jevGuess, guess.profile.caseInsensitiveCompare(name) == .orderedSame {
+                                Text("Jev's guess · \(guess.confidence.confidenceLabel)")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                         .padding(.horizontal, 8)
                         .padding(.vertical, 6)
@@ -173,7 +182,7 @@ struct ProfilePickerView: View {
             }
 
             HStack {
-                Button("Esc: \(model.question.defaultProfile)") { model.useDefault() }
+                Button(model.question.jevGuess == nil ? "Esc: \(model.question.defaultProfile)" : "Esc: \(model.question.defaultProfile) (Jev's guess)") { model.useDefault() }
                     .buttonStyle(.link)
                     .keyboardShortcut(.cancelAction)
                     .font(.caption)

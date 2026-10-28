@@ -133,11 +133,15 @@ public struct Verdict: Sendable, Equatable {
     public let decision: Decision
     /// The rule to save, if the decision is confident enough to generalize.
     public let learn: RuleKey?
+    /// For an unsure answer: how broad Jev thinks a rule for this link should be, when it said so
+    /// confidently, to preselect in the picker. Nothing is learned from it.
+    public let learnScope: LinkScope?
 
-    public init(profileName: String, decision: Decision, learn: RuleKey?) {
+    public init(profileName: String, decision: Decision, learn: RuleKey?, learnScope: LinkScope? = nil) {
         self.profileName = profileName
         self.decision = decision
         self.learn = learn
+        self.learnScope = learnScope
     }
 }
 
@@ -159,7 +163,8 @@ public enum DecisionPolicy {
         }
 
         guard outcome.profileConfidence >= profileThreshold else {
-            return Verdict(profileName: profileName, decision: .lowConfidence(confidence: outcome.profileConfidence), learn: nil)
+            return Verdict(profileName: profileName, decision: .lowConfidence(confidence: outcome.profileConfidence), learn: nil,
+                           learnScope: outcome.scopeConfidence >= scopeThreshold ? outcome.scope : nil)
         }
 
         let learn: RuleKey? = if let scope = outcome.scope, outcome.scopeConfidence >= scopeThreshold {
