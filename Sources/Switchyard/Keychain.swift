@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import Security
 
@@ -39,5 +40,10 @@ enum Keychain {
         item[kSecValueData as String] = Data(trimmed.utf8)
         item[kSecAttrLabel as String] = "Switchyard: TypeSafe API key"
         return SecItemAdd(item as CFDictionary, nil) == errSecSuccess
+    }
+
+    /// A short, one-way fingerprint of a key, to recognise it again without storing it.
+    static func fingerprint(of key: String) -> String {
+        SHA256.hash(data: Data(key.utf8)).prefix(8).map { String(format: "%02x", $0) }.joined()
     }
 }

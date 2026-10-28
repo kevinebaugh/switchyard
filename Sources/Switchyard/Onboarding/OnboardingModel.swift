@@ -93,11 +93,15 @@ final class OnboardingModel: ObservableObject {
         }
     }
 
-    /// Only the default browser can be put off: without Jev or the Automation grant Switchyard
-    /// can't route anything, so those steps have no skip. (Closing the window keeps setup
-    /// unfinished, and the menu offers to resume it.)
+    /// Steps that can be put off. Jev is optional: without a key Switchyard asks where each new
+    /// site goes and remembers the answer. The browser permission has no skip; without it nothing
+    /// routes. (Closing the window keeps setup unfinished, and the menu offers to resume it.)
     var deferLabel: String? {
-        step == .defaultBrowser && !isDefaultBrowser ? "Not yet" : nil
+        switch step {
+        case .defaultBrowser where !isDefaultBrowser: "Not yet"
+        case .jev where !hasKeyDraft && !keyState.isReady && keyState != .checking: "Skip: I'll pick profiles myself"
+        default: nil
+        }
     }
 
     /// The primary button is busy (a quiet spinner beside it, nothing else changes).

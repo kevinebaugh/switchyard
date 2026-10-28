@@ -338,8 +338,8 @@ private struct JevStep: View {
         VStack(spacing: 0) {
             StepHeader(
                 symbol: "sparkles",
-                title: "Connect Jev",
-                subtitle: "Links you haven't taught Switchyard yet are decided by Jev, TypeSafe's fast decision model. Its confident answers become rules, so each kind of link is asked about once."
+                title: "Connect Jev (optional)",
+                subtitle: "With a TypeSafe key, Jev, TypeSafe's fast decision model, picks the profile for sites Switchyard hasn't learned yet, and its confident answers become rules. Without one, Switchyard asks you instead: a small picker, once per site."
             )
             Card {
                 switch model.keyState {

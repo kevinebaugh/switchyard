@@ -10,7 +10,7 @@ Switchyard is a macOS menu-bar app that opens every link in the right browser pr
 
 Most links are routed by rules on your Mac, instantly and without going online. When a link matches no rule, Switchyard asks [Jev](https://typesafe.ai/blog/introducing-system-one-models-and-jev), a fast AI model from [TypeSafe](https://typesafe.ai). Instead of writing text, Jev picks one answer from a fixed list and says how sure it is. You write a sentence about what each profile is for, and for a link like `app.shortcut.com/acme/story/12` Jev answers something like "Work, 92% sure" in a fraction of a second. Sure answers usually become rules, so the same kind of link doesn't need to ask again. Unsure ones are flagged in the menu, where one click moves the link to the right profile and can save a rule.
 
-Jev needs a TypeSafe API key. Without one, Switchyard still follows your rules, and opens other links in a fallback profile you choose.
+A TypeSafe key is optional. Without one, Switchyard asks you instead: a small picker appears by the cursor for a site it doesn't know yet (press 1, 2, 3… or Esc for your default profile), and remembers your answer as a rule, so each site is asked about once. There are no reminders about not having a key.
 
 Inspired by [jdsimcoe/dia-router](https://github.com/jdsimcoe/dia-router), which routes links with hand-written rules.
 
@@ -45,7 +45,8 @@ You pick one browser during setup. Rules remember which browser they're for, so 
    | --- | --- |
    | Profile confidence ≥ 0.7 (adjustable) | Open there and save a rule at the scope Jev picked |
    | Lower confidence | Open in Jev's top pick; nothing is saved, and the row is flagged ⚠︎ |
-   | No key, timeout (1.2 s), offline, or an error | Open in the fallback profile (**Personal**) and show the reason |
+   | No key | Ask with the picker; your answer can become a rule |
+   | Timeout (1.2 s), offline, or an error | Open in the fallback profile (**Personal**) and show the reason |
 
    **Offline, or on a network that can't reach Jev** (in-flight Wi-Fi before you sign in): links without a rule open in the fallback profile immediately instead of waiting. With no network that starts with the first link; on a network that can't reach Jev, the first link still waits out the 1.2 s. Switchyard checks again in the background, backing off from 5 seconds to every 5 minutes, and at once after a network change. When Jev is back, it asks about the links it opened without Jev (from the last day, up to 25). Confident answers learn rules, and links Jev says belonged elsewhere get a **Move to …** button. Nothing re-opens on its own.
 
@@ -96,7 +97,7 @@ Rules live in `rules.json` in a folder you choose: **iCloud Drive** (`Switchyard
 You'll need:
 - macOS 26 or later, on Apple silicon or Intel
 - one of the browsers above
-- a [TypeSafe](https://typesafe.ai) API key for Jev
+- optionally, a [TypeSafe](https://typesafe.ai) API key for Jev; without one, Switchyard asks you where new sites go
 
 1. Download **Switchyard-x.y.z.dmg** from the [latest release](https://github.com/kevinebaugh/switchyard/releases/latest).
 2. Open it and drag **Switchyard** to Applications.
@@ -106,7 +107,7 @@ Switchyard is signed and notarized by Apple, and it updates itself (see [Updates
 
 ## Build from source
 
-Requires macOS 26 or later, one of the browsers above, and a [TypeSafe](https://typesafe.ai) API key for Jev. Building from source needs Xcode (or the Command Line Tools).
+Requires macOS 26 or later and one of the browsers above; a [TypeSafe](https://typesafe.ai) API key for Jev is optional. Building from source needs Xcode (or the Command Line Tools).
 
 ```sh
 swift test
@@ -119,7 +120,7 @@ On first launch, a setup window walks you through the steps:
    - **Dia:** Automation, so Switchyard can ask Dia to open tabs and list profiles in Dia's order. It covers Dia only; it isn't Accessibility.
    - **Chrome and friends:** access to the browser's data folder, which macOS protects, so Switchyard can read the profile list (and, on this Mac only, what each profile uses most). Opening links needs nothing extra.
 3. It finds your profiles.
-4. You connect Jev with your TypeSafe API key ([console.typesafe.ai/keys](https://console.typesafe.ai/keys)). The key is checked when you continue.
+4. You connect Jev with your TypeSafe API key ([console.typesafe.ai/keys](https://console.typesafe.ai/keys)), or skip it to pick profiles yourself. A key is checked when you continue.
 5. Switchyard drafts a description of each profile from the sites it uses most (and, in Chrome, the account it's signed in to), read locally from the browser's history, and you edit them. A profile without enough history is left blank rather than guessed.
 6. You make Switchyard the default browser. This is the one step you can put off ("Not yet").
 7. You choose login, notification and rules-sync options.

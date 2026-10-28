@@ -35,6 +35,10 @@ final class Router: ObservableObject {
 
     @Published private var apiKey: String?
     var hasAPIKey: Bool { apiKey != nil }
+    /// TypeSafe rejected the saved key (remembered by fingerprint, so a new key starts clean).
+    var isAPIKeyRejected: Bool {
+        apiKey.map { Notifier.shared.wasRejected(fingerprint: Keychain.fingerprint(of: $0)) } ?? false
+    }
     private var lastActivity = Date.distantPast
     private var keepWarmTask: Task<Void, Never>?
 
@@ -148,13 +152,29 @@ final class Router: ObservableObject {
         let started = clock.now
         touchActivity()
 
-        let verdict: Verdict
+        var verdict: Verdict
         if let forcedProfile, let name = profiles.profileName(matching: forcedProfile) {
             verdict = Verdict(profileName: name, decision: .explicit, learn: nil)
         } else {
             verdict = await decide(url, source: source)
         }
+        // Decision time only; time spent answering the picker isn't Switchyard's.
         let milliseconds = started.duration(to: clock.now).milliseconds
+
+        // No key: ask, and remember the answer if you like.
+        var pickedRuleID: UUID?
+        if case .fallback(.noAPIKey) = verdict.decision, profiles.names.count > 1 {
+            let scopes = (LinkFeatures(url: url)?.correctionOptions ?? []) + (source.map { [RuleKey.app($0)] } ?? [])
+            let question = ProfilePicker.Question(url: url, profiles: profiles.names,
+                                                  defaultProfile: verdict.profileName, scopes: scopes)
+            if let answer = await ProfilePicker.shared.ask(question) {
+                if let key = answer.remember {
+                    pickedRuleID = rules.upsert(key: key, profileName: answer.profileName, origin: .corrected).id
+                }
+                verdict = Verdict(profileName: answer.profileName,
+                                  decision: .asked(remembered: answer.remember != nil), learn: nil)
+            }
+        }
 
         var record = RoutingRecord(
             url: url,
@@ -166,6 +186,7 @@ final class Router: ObservableObject {
         status = "\(url.displayHost) → \(verdict.profileName) (\(verdict.decision.badge), \(record.latencyLabel))"
         log.info("\(url.host ?? "?", privacy: .public) → \(verdict.profileName, privacy: .public) [\(verdict.decision.badge, privacy: .public)] in \(record.latencyLabel, privacy: .public)")
 
+        record.learnedRuleID = pickedRuleID
         if let error = await open(url, in: verdict.profileName) {
             record.openError = error
         }
@@ -186,6 +207,10 @@ final class Router: ObservableObject {
             if !outageNotified {
                 outageNotified = true
                 notifier.notifyOutage(reason, fallbackProfile: verdict.profileName)
+            }
+        } else if case .fallback(.unauthorized) = record.decision {
+            if let apiKey, notifier.notifyRejectedKey(fingerprint: Keychain.fingerprint(of: apiKey), fallbackProfile: verdict.profileName) {
+                objectWillChange.send()
             }
         } else if record.decision.needsAttention {
             notifier.notify(about: record)

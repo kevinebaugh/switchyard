@@ -30,11 +30,15 @@ struct SettingsView: View {
                 }
                 if !router.hasAPIKey {
                     HStack {
-                        Text("Without a key, unmatched links open in \(router.fallbackProfileName).")
+                        Text("Optional. Without a key, Switchyard asks where each new site should open and remembers your answer. With one, Jev picks for you.")
                             .foregroundStyle(.secondary)
                         Link("Get a key", destination: URL(string: "https://console.typesafe.ai/keys")!)
                     }
                     .font(.caption)
+                } else if router.isAPIKeyRejected {
+                    Label("TypeSafe rejected this key. Paste a working one, or remove it to have Switchyard ask instead.", systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
                 }
                 LabeledContent("Learn a rule at confidence") {
                     HStack {

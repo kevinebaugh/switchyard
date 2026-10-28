@@ -51,6 +51,19 @@ public enum RoutingExplanation {
             }
             return Line(text: "Jev unsure (\(format(confidence))) · nothing saved", needsAttention: true)
 
+        case .asked:
+            if let saved {
+                return Line(text: "You picked it · saved \(saved)", needsAttention: false)
+            }
+            return Line(text: "You picked it", needsAttention: false)
+
+        case .fallback(.noAPIKey):
+            // You pressed Esc in the picker (or it couldn't be shown). Not a fault.
+            if let saved {
+                return Line(text: "No rule yet · you saved \(saved)", needsAttention: false)
+            }
+            return Line(text: "No rule yet · opened in your default profile", needsAttention: false)
+
         case let .fallback(reason) where reason.isNetworkFailure:
             return network(reason, record: record, saved: saved, savedOrigin: record.learnedRuleID.flatMap(rule)?.origin)
 
@@ -58,7 +71,8 @@ public enum RoutingExplanation {
             if let saved {
                 return Line(text: "Fallback: \(reason.label) · you saved \(saved)", needsAttention: false)
             }
-            return Line(text: "Fallback: \(reason.label)", needsAttention: true)
+            // A rejected key is said once, in a notification and Settings; it doesn't badge every link.
+            return Line(text: "Fallback: \(reason.label)", needsAttention: true, badges: reason != .unauthorized)
 
         case .explicit:
             return Line(text: "Opened in a named profile", needsAttention: false)

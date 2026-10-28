@@ -2,6 +2,11 @@
 
 All notable changes to Switchyard. Versions follow [Semantic Versioning](https://semver.org).
 
+## [Unreleased]
+
+- **Works without a TypeSafe key.** For a site Switchyard doesn't know yet, a small picker appears by the cursor: press 1, 2, 3… (or click) to choose the profile, or Esc for your default. "Always for …" saves your answer as a rule, so each site is asked about once, and three picks in a row from one app offer an app rule. Setup's Jev step can be skipped.
+- No reminders about not having a key. A rejected key is mentioned once, not every hour, and shown in Settings.
+
 ## [0.9.9] - 2026-10-28
 
 - New and renamed browser profiles show up as soon as the browser saves them, even with the menu open.

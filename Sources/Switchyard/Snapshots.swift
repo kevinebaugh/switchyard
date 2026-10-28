@@ -20,6 +20,7 @@ enum Snapshots {
         renderRules(to: directory)
         renderSupport(to: directory)
         renderProfiles(to: directory)
+        renderPicker(to: directory)
 
         for step in OnboardingModel.Step.allCases {
             for variant in variants(for: step) {
@@ -164,6 +165,16 @@ enum Snapshots {
             .environmentObject(settings)
         writeBothAppearances(menu, size: NSSize(width: 460, height: 600), to: directory, name: "menu-profiles")
         MenuNavigation.shared.tab = .recent
+    }
+
+    /// The no-key "which profile?" picker, with a second link waiting.
+    static func renderPicker(to directory: URL) {
+        let url = URL(string: "https://app.example-tracker.com/acme/issue/42")!
+        let question = ProfilePicker.Question(
+            url: url, profiles: profiles.map(\.name), defaultProfile: "Personal",
+            scopes: LinkFeatures(url: url)?.correctionOptions ?? [])
+        let view = ProfilePickerView(model: ProfilePickerModel(question: question, waiting: 1) { _ in })
+        writeBothAppearances(view, size: NSSize(width: 300, height: 250), to: directory, name: "picker")
     }
 
     /// The support reminder card at the top of Recent.

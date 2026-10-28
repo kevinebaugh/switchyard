@@ -93,11 +93,8 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         let title: String
         var body = "\(host) → \(record.profileName)"
         switch record.decision {
-        case let .fallback(reason) where reason.isSetupProblem:
-            notifySetupProblem(reason == .noAPIKey
-                ? "No TypeSafe API key: new links open in \(record.profileName). Add one in Switchyard → Settings."
-                : "Jev rejected the API key: new links open in \(record.profileName). Check Settings.")
-            return
+        case let .fallback(reason) where reason.isSetupProblem || reason == .noAPIKey:
+            return   // a rejected key is notified once (notifyRejectedKey); no key is fine
         case let .fallback(reason):
             title = reason == .timeout ? "Jev was too slow" : "Fallback: \(reason.label)"
         case let .lowConfidence(confidence) where settings.notifyLowConfidence:
@@ -118,6 +115,27 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         content.categoryIdentifier = "routing.\(record.profileName)"
         content.userInfo = ["recordID": record.id.uuidString]
         center.add(UNNotificationRequest(identifier: record.id.uuidString, content: content, trigger: nil))
+    }
+
+    private static let rejectedKeyDefaultsKey = "rejectedKeyFingerprint"
+
+    /// TypeSafe rejected the key. Says so once per key (not hourly): the fingerprint, never the
+    /// key, is remembered, so saving a new key starts fresh. Returns true if this was news.
+    @discardableResult
+    func notifyRejectedKey(fingerprint: String, fallbackProfile: String) -> Bool {
+        let defaults = AppEnvironment.defaults
+        guard defaults.string(forKey: Self.rejectedKeyDefaultsKey) != fingerprint else { return false }
+        defaults.set(fingerprint, forKey: Self.rejectedKeyDefaultsKey)
+        guard AppSettings.shared.notificationsEnabled else { return true }
+        let content = UNMutableNotificationContent()
+        content.title = "TypeSafe rejected your API key"
+        content.body = "Until you add a working key in Settings, Switchyard opens new sites in \(fallbackProfile)."
+        center.add(UNNotificationRequest(identifier: "rejected-key", content: content, trigger: nil))
+        return true
+    }
+
+    func wasRejected(fingerprint: String) -> Bool {
+        AppEnvironment.defaults.string(forKey: Self.rejectedKeyDefaultsKey) == fingerprint
     }
 
     func notifySetupProblem(_ message: String) {

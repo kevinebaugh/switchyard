@@ -57,12 +57,10 @@ public enum FallbackReason: Codable, Hashable, Sendable {
         }
     }
 
-    /// Problems the user has to fix, as opposed to transient failures.
+    /// Problems the user has to fix, as opposed to transient failures. Having no key isn't one:
+    /// without a key Switchyard asks where new sites go, which is a fine way to use it.
     public var isSetupProblem: Bool {
-        switch self {
-        case .noAPIKey, .unauthorized: true
-        default: false
-        }
+        self == .unauthorized
     }
 }
 
@@ -74,6 +72,8 @@ public enum Decision: Codable, Hashable, Sendable {
     case fallback(FallbackReason)
     /// `switchyard://open?profile=` or "open again in" from the menu.
     case explicit
+    /// No key, so Switchyard asked; `remembered` when the answer was saved as a rule.
+    case asked(remembered: Bool)
 
     /// A compact form for the status line and the log; the Recent list uses RoutingExplanation.
     public var badge: String {
@@ -83,12 +83,14 @@ public enum Decision: Codable, Hashable, Sendable {
         case let .lowConfidence(confidence): "⚠︎ Jev \(confidence.confidenceLabel)"
         case let .fallback(reason): "↩︎ fallback · \(reason.label)"
         case .explicit: "manual"
+        case .asked: "asked"
         }
     }
 
     public var needsAttention: Bool {
         switch self {
-        case .lowConfidence, .fallback: true
+        case .lowConfidence: true
+        case let .fallback(reason): reason != .noAPIKey
         default: false
         }
     }
