@@ -18,6 +18,7 @@ struct SettingsView: View {
     @State private var launchAtLogin = LoginItem.isEnabled
     @State private var systemError: String?
     @State private var notificationAccess: Notifier.Access?
+    @State private var copiedDiagnostics = false
 
     var body: some View {
         Form {
@@ -132,6 +133,15 @@ struct SettingsView: View {
                     Spacer()
                     Button("About Switchyard") { AboutPanel.show() }
                 }
+                HStack {
+                    Button("Copy Diagnostics") { Task { await copyDiagnostics() } }
+                        .help("Copies app, browser and permission details for a bug report. No links, profile names or keys.")
+                    if copiedDiagnostics {
+                        Label("Copied: paste it into a GitHub issue", systemImage: "checkmark.circle.fill")
+                            .font(.caption)
+                            .foregroundStyle(.green)
+                    }
+                }
                 if let systemError {
                     Text(systemError).font(.caption).foregroundStyle(.red)
                 }
@@ -232,6 +242,42 @@ struct SettingsView: View {
         let version = info["CFBundleShortVersionString"] as? String ?? "?"
         let build = info["CFBundleVersion"] as? String ?? "?"
         return "\(version) (\(build))"
+    }
+
+    private func copyDiagnostics() async {
+        #if arch(arm64)
+        let architecture = "Apple silicon"
+        #else
+        let architecture = "Intel"
+        #endif
+        let jev: String = if !router.hasAPIKey {
+            "not used (no key)"
+        } else {
+            router.connectivity.state.skipReason?.label ?? "reachable"
+        }
+        let report = DiagnosticsReport(
+            appVersion: Self.versionString,
+            macOS: ProcessInfo.processInfo.operatingSystemVersionString,
+            architecture: architecture,
+            browser: settings.browser.displayName,
+            installedBrowsers: Browsers.installed.map(\.displayName),
+            browserPermission: String(describing: await router.browser.permission(ask: false)),
+            notifications: String(describing: await Notifier.shared.access()),
+            hasKey: router.hasAPIKey,
+            keyRejected: router.isAPIKeyRejected,
+            jev: jev,
+            rulesFolder: settings.rulesLocation.label,
+            rules: rules.browserRules.count,
+            rulesReadOnly: rules.readOnlyReason,
+            profiles: profiles.names.count,
+            isRehearsal: AppEnvironment.isRehearsal,
+            recentDecisions: DiagnosticsReport.decisions(from: HistoryStore.shared.records)
+        )
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(report.markdown, forType: .string)
+        withAnimation { copiedDiagnostics = true }
+        try? await Task.sleep(for: .seconds(3))
+        withAnimation { copiedDiagnostics = false }
     }
 
     private func saveKey() {
