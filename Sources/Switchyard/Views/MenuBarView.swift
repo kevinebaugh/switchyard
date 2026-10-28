@@ -32,7 +32,7 @@ struct MenuBarView: View {
                         .foregroundStyle(.orange)
                 }
                 Spacer()
-                Picker("", selection: $navigation.tab) {
+                Picker("Switchyard sections", selection: $navigation.tab) {
                     ForEach(Tab.allCases) { Text($0.rawValue).tag($0) }
                 }
                 .pickerStyle(.segmented)
@@ -145,6 +145,7 @@ struct ProfileChip: View {
             .background(colorScheme == .dark ? tint.opacity(0.28) : text.opacity(0.18), in: Capsule())
             .foregroundStyle(text)
             .opacity(index == nil ? 0.6 : 1)
+            .accessibilityLabel("Profile: \(name)")
     }
 }
 
@@ -225,6 +226,7 @@ struct RecentRow: View {
                         Image(systemName: "exclamationmark.triangle.fill").imageScale(.small)
                     } else if record.isAwaitingCatchUp {
                         Image(systemName: "wifi.slash").imageScale(.small)
+                            .accessibilityLabel("Opened without Jev")
                     }
                     Text(why.text)
                         .lineLimit(1)
@@ -273,6 +275,7 @@ struct RecentRow: View {
             .menuIndicator(.hidden)
             .fixedSize()
             .help("Should have opened somewhere else?")
+            .accessibilityLabel("Should have opened somewhere else")
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 7)
@@ -418,6 +421,7 @@ struct RulesView: View {
                         .onSubmit { if let addCandidate { add(addCandidate) } }
                     if !query.isEmpty {
                         Button { query = "" } label: { Image(systemName: "xmark.circle.fill") }
+                            .accessibilityLabel("Clear search")
                             .buttonStyle(.borderless)
                             .foregroundStyle(.tertiary)
                     }
@@ -589,6 +593,7 @@ struct RuleRow: View {
             .labelsHidden()
             .frame(width: 100)
             .disabled(rules.isReadOnly)
+            .accessibilityLabel("Profile for \(rule.key.label)")
             Button {
                 rules.delete(id: rule.id)
             } label: {
@@ -596,12 +601,14 @@ struct RuleRow: View {
             }
             .buttonStyle(.borderless)
             .help("Delete rule")
+            .accessibilityLabel("Delete rule for \(rule.key.label)")
             .disabled(rules.isReadOnly)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 5)
         .opacity(row.isStale ? 0.55 : 1)
         .help(row.isStale ? "Not used in 90 days" : "")
+        .accessibilityHint(row.isStale ? "Not used in 90 days" : "")
     }
 
     /// "Jev · used 2 hr. ago · 14×" / "yours · never used"

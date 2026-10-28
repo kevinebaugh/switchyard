@@ -176,5 +176,6 @@ struct ProfileDot: View {
         let color = index.flatMap { profiles[$0].colorARGB }.map(ProfileChip.color(argb:))
             ?? index.map { ProfileChip.palette[$0 % ProfileChip.palette.count] } ?? .gray
         Circle().fill(color).frame(width: 10, height: 10)
+            .accessibilityHidden(true)   // the name is always right beside it
     }
 }

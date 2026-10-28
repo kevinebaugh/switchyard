@@ -278,6 +278,7 @@ private struct BrowserChoice: View {
             )
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 
