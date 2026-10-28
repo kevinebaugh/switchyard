@@ -6,7 +6,7 @@ All notable changes to Switchyard. Versions follow [Semantic Versioning](https:/
 
 - **Your data across versions, in writing:** [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md). Rules files from every format are now read in tests on every build.
 - **Copy Diagnostics** (Settings → System) for bug reports. It contains no links, profile names or keys. The README has a Troubleshooting section, and GitHub has issue templates.
-- **Support syncs between your Macs.** After a payment, your other Macs stop reminding you too. If you paid but still see reminders, Settings → Support links to a short form.
+- **Support syncs between your Macs.** After a payment, your other Macs stop reminding you too. If you paid but still see reminders, "Paid but still seeing this?" (on the reminder and in Settings → Support) links to a short form. "I've already supported" is gone.
 - **VoiceOver:** icon-only buttons have labels, profile chips say what they are, and setup reports which browser is selected.
 
 ## [0.9.10] - 2026-10-28

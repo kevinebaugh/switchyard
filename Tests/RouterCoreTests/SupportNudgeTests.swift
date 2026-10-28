@@ -46,4 +46,32 @@ import Testing
         #expect(SupportNudge.isCheckoutSessionID("cs_test_a1" + String(repeating: "B2c3", count: 14), allowTest: true))
         #expect(!SupportNudge.isCheckoutSessionID("cs_test_short", allowTest: true))
     }
+
+    let live = "cs_live_a1" + String(repeating: "B2c3", count: 14)
+    let otherLive = "cs_live_z9" + String(repeating: "Y8x7", count: 14)
+    let test = "cs_test_a1" + String(repeating: "B2c3", count: 14)
+
+    @Test func aPayingMacSharesItsSessionWhenTheFolderHasNone() {
+        #expect(SupportSync.action(savedSession: live, sharedSession: nil, isSupporter: true, allowTest: false) == .share(session: live))
+        // A broken or hand-edited file doesn't block sharing a real session.
+        #expect(SupportSync.action(savedSession: live, sharedSession: "nonsense", isSupporter: true, allowTest: false) == .share(session: live))
+    }
+
+    @Test func anotherMacAdoptsTheSharedSession() {
+        #expect(SupportSync.action(savedSession: nil, sharedSession: live, isSupporter: false, allowTest: false) == .adopt(session: live))
+        // Already a supporter: nothing to change, and the folder keeps the first Mac's session.
+        #expect(SupportSync.action(savedSession: otherLive, sharedSession: live, isSupporter: true, allowTest: false) == .nothing)
+    }
+
+    @Test func implausibleSessionsDoNothing() {
+        #expect(SupportSync.action(savedSession: nil, sharedSession: nil, isSupporter: false, allowTest: false) == .nothing)
+        #expect(SupportSync.action(savedSession: nil, sharedSession: "cs_live_short", isSupporter: false, allowTest: false) == .nothing)
+        #expect(SupportSync.action(savedSession: "made-up", sharedSession: nil, isSupporter: true, allowTest: false) == .nothing)
+    }
+
+    @Test func sandboxSessionsOnlyCountInRehearsals() {
+        #expect(SupportSync.action(savedSession: nil, sharedSession: test, isSupporter: false, allowTest: false) == .nothing)
+        #expect(SupportSync.action(savedSession: nil, sharedSession: test, isSupporter: false, allowTest: true) == .adopt(session: test))
+        #expect(SupportSync.action(savedSession: test, sharedSession: nil, isSupporter: true, allowTest: false) == .nothing)
+    }
 }

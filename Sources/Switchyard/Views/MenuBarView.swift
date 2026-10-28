@@ -376,8 +376,7 @@ struct SupportCard: View {
                 }
                 .font(.caption2)
                 HStack(spacing: 8) {
-                    Button("I've already supported") { support.markSupported() }
-                        .buttonStyle(.link)
+                    Link("Paid but still seeing this?", destination: SupportReminder.paidButStillSeeingURL)
                         .font(.caption)
                     Spacer()
                     Button("Not now") { support.notNow() }

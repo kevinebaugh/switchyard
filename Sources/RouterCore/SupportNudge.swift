@@ -53,3 +53,22 @@ public enum SupportNudge {
         state.lastShownDate = now
     }
 }
+
+/// What one Mac does with `supporter.json` in the sync folder (see SupportReminder): share its own
+/// payment if the folder has none, or adopt the folder's if it isn't a supporter yet. Sessions are
+/// checked for shape on every Mac, so a hand-written file needs at least a plausible session ID.
+public enum SupportSync: Equatable, Sendable {
+    case share(session: String)
+    case adopt(session: String)
+    case nothing
+
+    public static func action(savedSession: String?, sharedSession: String?, isSupporter: Bool, allowTest: Bool) -> SupportSync {
+        let saved = savedSession.flatMap { SupportNudge.isCheckoutSessionID($0, allowTest: allowTest) ? $0 : nil }
+        let shared = sharedSession.flatMap { SupportNudge.isCheckoutSessionID($0, allowTest: allowTest) ? $0 : nil }
+        if let shared {
+            return isSupporter ? .nothing : .adopt(session: shared)
+        }
+        if let saved { return .share(session: saved) }
+        return .nothing
+    }
+}

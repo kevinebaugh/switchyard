@@ -226,7 +226,7 @@ build/Switchyard.noindex/Switchyard.app/Contents/MacOS/Switchyard --snapshot-onb
 
 Switchyard is free and open source. If it saves you from wrong-profile tabs, you can [support it once](https://buy.stripe.com/6oU8wR2sC1eJcLT4tW0ZW00), paying what you want ($10 suggested). 1% goes to removing carbon from the atmosphere through Stripe Climate.
 
-Every 50 links, at most once a week, Switchyard shows a small card in Recent and a quiet notification asking for support. Paying, or clicking "I've already supported", stops them for good. Routing is never affected.
+Every 50 links, at most once a week, Switchyard shows a small card in Recent and a quiet notification asking for support. Paying stops them for good, on every Mac that shares your rules folder. Paid but still seeing them (say, you paid on your phone)? Settings → Support links to a short form. Routing is never affected.
 
 ## License
 

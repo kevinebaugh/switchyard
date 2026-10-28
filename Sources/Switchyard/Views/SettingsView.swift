@@ -167,13 +167,8 @@ struct SettingsView: View {
                             Spacer()
                         }
                         .font(.caption)
-                        HStack {
-                            Link("Paid but still seeing reminders?", destination: SupportReminder.paidButStillSeeingURL)
-                            Spacer()
-                            Button("I've already supported") { support.markSupported() }
-                                .buttonStyle(.link)
-                        }
-                        .font(.caption)
+                        Link("Paid but still seeing reminders?", destination: SupportReminder.paidButStillSeeingURL)
+                            .font(.caption)
                     }
                 }
             }

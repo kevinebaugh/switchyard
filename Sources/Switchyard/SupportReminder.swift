@@ -57,7 +57,8 @@ final class SupportReminder: ObservableObject {
         isShowingCard = false
     }
 
-    /// From `switchyard://supported?session=…` (the thank-you page) or "I've already supported".
+    /// From `switchyard://supported?session=…` (the thank-you page, or a link Kevin sends someone who
+    /// paid but still sees reminders), or from another Mac's `supporter.json`.
     /// The session ID is kept only as a local record of the payment.
     func markSupported(checkoutSession: String? = nil) {
         if let checkoutSession { defaults.set(checkoutSession, forKey: SettingsKey.supportCheckoutSession.rawValue) }
@@ -70,8 +71,8 @@ final class SupportReminder: ObservableObject {
 
     /// `supporter.json` beside rules.json in the sync folder: the checkout session that proved a
     /// payment, so your other Macs stop reminding too. Each Mac re-checks the session's shape
-    /// (a little friction, not a lock). "I've already supported" has no session, so it stays on
-    /// that Mac.
+    /// (a little friction, not a lock). Macs marked supporter before sessions existed have none to
+    /// share; their other Macs can use "Paid but still seeing this?".
     private struct SharedSupport: Codable {
         var session: String
         var since: Date
@@ -91,17 +92,19 @@ final class SupportReminder: ObservableObject {
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
             let shared = (try? Data(contentsOf: file)).flatMap { try? decoder.decode(SharedSupport.self, from: $0) }
-            let sharedIsValid = shared.map { SupportNudge.isCheckoutSessionID($0.session, allowTest: allowTest) } ?? false
-
-            if !sharedIsValid, let saved, SupportNudge.isCheckoutSessionID(saved, allowTest: allowTest) {
+            switch SupportSync.action(savedSession: saved, sharedSession: shared?.session,
+                                      isSupporter: alreadySupporter, allowTest: allowTest) {
+            case let .share(session):
                 let encoder = JSONEncoder()
                 encoder.dateEncodingStrategy = .iso8601
                 encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-                if let data = try? encoder.encode(SharedSupport(session: saved, since: Date())) {
+                if let data = try? encoder.encode(SharedSupport(session: session, since: Date())) {
                     try? data.write(to: file, options: .atomic)
                 }
-            } else if !alreadySupporter, sharedIsValid, let session = shared?.session {
+            case let .adopt(session):
                 await MainActor.run { SupportReminder.shared.markSupported(checkoutSession: session) }
+            case .nothing:
+                break
             }
         }
     }
