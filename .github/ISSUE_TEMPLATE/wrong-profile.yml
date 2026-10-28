@@ -1,0 +1,35 @@
+name: A link opened in the wrong profile
+description: Switchyard picked a profile you didn't expect.
+labels: [routing]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        First, try correcting it: in Switchyard's Recent tab, open the row's ↪︎ menu and choose "Should have opened in…". That saves a rule so it doesn't happen again. If the pick still seems wrong, or keeps happening, tell us here. Please don't paste private links.
+  - type: input
+    id: explanation
+    attributes:
+      label: The reason Recent shows
+      description: 'The grey line under the link in Recent, for example "Jev 0.62 · nothing saved" or "Learned rule: all of example.com".'
+    validations:
+      required: true
+  - type: input
+    id: expected
+    attributes:
+      label: Which kind of profile should it have opened in, and why?
+      description: For example "my work profile; it's our company's issue tracker".
+    validations:
+      required: true
+  - type: dropdown
+    id: browser
+    attributes:
+      label: Browser
+      options: [Dia, Chrome, Firefox, Brave, Edge, Vivaldi]
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics (optional)
+      description: Settings → System → Copy Diagnostics.
+      render: markdown

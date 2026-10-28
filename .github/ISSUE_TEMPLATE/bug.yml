@@ -1,0 +1,19 @@
+name: Something isn't working
+description: A bug, a crash, or setup that won't finish.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics
+      description: In Switchyard's menu, open Settings → System → Copy Diagnostics, then paste here. It contains no links, profile names or keys.
+      render: markdown
+    validations:
+      required: true

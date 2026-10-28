@@ -109,6 +109,26 @@ You'll need:
 
 Switchyard is signed and notarized by Apple, and it updates itself (see [Updates](#updates)).
 
+## Troubleshooting
+
+**Links don't reach Switchyard.** Switchyard only sees links while it's the default browser. Open Switchyard (from Applications or Spotlight) and it offers to fix that, or use Settings → System → Make Default. Some apps keep their own browser setting; Slack, for example, follows the system default.
+
+**A link opened in the wrong profile.** In Recent, open the row's ↪︎ menu and choose "Should have opened in…". Switchyard reopens the link where it belongs and saves a rule. If Jev keeps guessing wrong for a kind of site, make that profile's description more specific in the Profiles tab.
+
+**Setup can't read your profiles.** Chrome, Firefox and the other Chromium browsers keep their profile list in a folder macOS protects. Allow Switchyard when macOS asks, or later in System Settings → Privacy & Security (App Data, or Full Disk Access). Dia instead needs Automation permission for Switchyard: System Settings → Privacy & Security → Automation.
+
+**"Switchyard wants to access files managed by Dropbox."** That's macOS asking on Dropbox's behalf, when your rules sync through Dropbox. Allow it, or Switchyard can't read or save your rules there.
+
+**The picker doesn't appear.** It only appears when there's no TypeSafe key and no rule matches. With a key, Jev decides instead.
+
+**Notifications don't appear.** Settings → Notifications shows whether macOS allows them, with a shortcut to System Settings. A Focus holds notifications back; they still collect in Notification Center.
+
+**Start setup over.** Settings → System → Run Setup Again…. To try setup without touching your real settings, run `scripts/rehearse-onboarding.sh` from a checkout of this repository.
+
+**Logs.** Open Console, search for `subsystem:com.kevinebaugh.switchyard`, and turn on Action → Include Info Messages. The categories are `router` (each link's decision), `rules` (sync and recovery) and `connectivity` (offline handling).
+
+**Still stuck?** [Open an issue](https://github.com/kevinebaugh/switchyard/issues/new/choose) and paste the output of Settings → System → Copy Diagnostics. It contains no links, profile names or keys.
+
 ## Build from source
 
 Requires macOS 26 or later and one of the browsers above; a [TypeSafe](https://typesafe.ai) API key for Jev is optional. Building from source needs Xcode (or the Command Line Tools).
