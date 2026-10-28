@@ -125,7 +125,8 @@ final class Router: ObservableObject {
             if incoming.host?.lowercased() == "supported" {
                 let session = URLComponents(url: incoming, resolvingAgainstBaseURL: false)?
                     .queryItems?.first(where: { $0.name == "session" })?.value ?? ""
-                guard SupportNudge.isCheckoutSessionID(session) else {
+                // Test-mode (sandbox) checkouts count only in a rehearsal, whose settings are thrown away.
+                guard SupportNudge.isCheckoutSessionID(session, allowTest: AppEnvironment.isRehearsal) else {
                     status = "Ignored switchyard://supported without a checkout session"
                     return
                 }

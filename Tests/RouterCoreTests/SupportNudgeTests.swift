@@ -42,5 +42,8 @@ import Testing
         #expect(!SupportNudge.isCheckoutSessionID("cs_test_a1" + String(repeating: "B2c3", count: 14)))
         #expect(!SupportNudge.isCheckoutSessionID("cs_live_" + String(repeating: "x", count: 40) + "&evil=1"))
         #expect(!SupportNudge.isCheckoutSessionID("{CHECKOUT_SESSION_ID}"))
+        // Sandbox sessions only when asked for (rehearsals).
+        #expect(SupportNudge.isCheckoutSessionID("cs_test_a1" + String(repeating: "B2c3", count: 14), allowTest: true))
+        #expect(!SupportNudge.isCheckoutSessionID("cs_test_short", allowTest: true))
     }
 }

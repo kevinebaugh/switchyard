@@ -78,11 +78,11 @@
   <p class="small"><span class="leaf">●</span> 1% of your payment goes to removing carbon from the atmosphere.</p>
 </main>
 <script>
-  // Stripe redirects here with ?session_id=cs_live_…; pass it on so Switchyard knows this came
-  // from a real checkout. Then hand straight back to the app (the browser asks first); the
+  // Stripe redirects here with ?session_id=cs_live_… (cs_test_… from the sandbox); pass it on so
+  // Switchyard knows this came from a checkout. The app decides which kinds it accepts. Then hand straight back to the app (the browser asks first); the
   // button covers browsers that want a click.
   var session = new URLSearchParams(location.search).get("session_id") || "";
-  var target = "switchyard://supported" + (/^cs_live_[A-Za-z0-9]+$/.test(session) ? "?session=" + session : "");
+  var target = "switchyard://supported" + (/^cs_(live|test)_[A-Za-z0-9]+$/.test(session) ? "?session=" + session : "");
   document.getElementById("open").href = target;
   window.addEventListener("load", function () { window.location.href = target; });
 </script>

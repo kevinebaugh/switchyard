@@ -39,9 +39,11 @@ public enum SupportNudge {
     /// alphanumeric tail), as the thank-you page passes along after a real payment. The app can't
     /// verify it with Stripe (that needs a secret key), so this only keeps a bare
     /// `switchyard://supported` from counting.
-    public static func isCheckoutSessionID(_ id: String) -> Bool {
-        let prefix = "cs_live_"
-        guard id.hasPrefix(prefix) else { return false }
+    /// `allowTest` also accepts Stripe test-mode sessions (`cs_test_`), for rehearsals against a
+    /// sandbox checkout; the real app never passes it.
+    public static func isCheckoutSessionID(_ id: String, allowTest: Bool = false) -> Bool {
+        let prefixes = allowTest ? ["cs_live_", "cs_test_"] : ["cs_live_"]
+        guard let prefix = prefixes.first(where: { id.hasPrefix($0) }) else { return false }
         let tail = id.dropFirst(prefix.count)
         return tail.count >= 40 && tail.allSatisfy { $0.isASCII && ($0.isLetter || $0.isNumber) }
     }
