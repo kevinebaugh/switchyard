@@ -41,7 +41,10 @@ final class ProfilePicker {
         }
         let panel = self.panel ?? PickerPanel()
         self.panel = panel
-        panel.contentView = NSHostingView(rootView: ProfilePickerView(model: model).environmentObject(ProfilesMonitor.shared))
+        let hosting = NSHostingView(rootView: ProfilePickerView(model: model).environmentObject(ProfilesMonitor.shared))
+        // The title bar is hidden but still reserves its height; let the content use it.
+        hosting.safeAreaRegions = []
+        panel.contentView = hosting
         panel.setContentSize(panel.contentView!.fittingSize)
         panel.place(near: NSEvent.mouseLocation)
         panel.orderFrontRegardless()
