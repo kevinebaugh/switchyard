@@ -2,7 +2,7 @@
 
 All notable changes to Switchyard. Versions follow [Semantic Versioning](https://semver.org).
 
-## [Unreleased]
+## [0.9.9] - 2026-10-28
 
 - New and renamed browser profiles show up as soon as the browser saves them, even with the menu open.
 
