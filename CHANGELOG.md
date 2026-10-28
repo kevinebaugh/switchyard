@@ -2,6 +2,10 @@
 
 All notable changes to Switchyard. Versions follow [Semantic Versioning](https://semver.org).
 
+## [Unreleased]
+
+- New and renamed browser profiles show up as soon as the browser saves them, even with the menu open.
+
 ## [0.9.8] - 2026-10-23
 
 - Profile descriptions only show "Saved" after a change; pressing Return on an unchanged description no longer does.

@@ -26,6 +26,51 @@ final class ProfilesMonitor: ObservableObject {
         refresh()
     }
 
+    // MARK: Watching for new and renamed profiles
+
+    /// Folder watchers on the browser's profile list, so a profile added or renamed in the browser
+    /// shows up as soon as the browser saves it (Dia and Chrome replace `Local State` rather than
+    /// editing it, so the folder is watched, not the file).
+    private var watchers: [DispatchSourceFileSystemObject] = []
+    private var watchedFolders: [URL] = []
+    private var pendingRefresh: Task<Void, Never>?
+
+    private func watch() {
+        var folders = [browser.profileListFile().deletingLastPathComponent()]
+        if let firefoxDatabase { folders.append(firefoxDatabase.deletingLastPathComponent()) }
+        guard folders != watchedFolders else { return }
+        stopWatching()
+        watchedFolders = folders
+        for folder in folders {
+            let descriptor = open(folder.path, O_EVTONLY)
+            guard descriptor >= 0 else { continue }
+            let source = DispatchSource.makeFileSystemObjectSource(fileDescriptor: descriptor, eventMask: [.write, .rename, .delete], queue: .main)
+            source.setEventHandler { [weak self] in
+                MainActor.assumeIsolated { self?.scheduleRefresh() }
+            }
+            source.setCancelHandler { close(descriptor) }
+            source.resume()
+            watchers.append(source)
+        }
+    }
+
+    private func stopWatching() {
+        watchers.forEach { $0.cancel() }
+        watchers = []
+        watchedFolders = []
+    }
+
+    /// Browsers write their data folder in bursts; settle for a moment, then re-read (which is a
+    /// no-op unless the profile list itself changed).
+    private func scheduleRefresh() {
+        pendingRefresh?.cancel()
+        pendingRefresh = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(400))
+            guard !Task.isCancelled else { return }
+            self?.refresh()
+        }
+    }
+
     var names: [String] { profiles.map(\.name) }
 
     /// The browser's own profile order, when it can report one (Dia's scripting interface
@@ -44,6 +89,7 @@ final class ProfilesMonitor: ObservableObject {
         guard browser != self.browser else { return }
         self.browser = browser
         lastModified = nil
+        stopWatching()
         firefoxDatabase = nil
         localStateProfiles = []
         profiles = []
@@ -56,6 +102,7 @@ final class ProfilesMonitor: ObservableObject {
         // Chrome's folder is protected; don't touch it (and trigger the macOS prompt) before
         // setup has asked for access.
         guard Browsers.adapter(for: browser).canReadProfilesSilently else { return profiles }
+        defer { watch() }
 
         let url = browser.profileListFile()
         // Firefox's profile manager keeps names in its group database (and its WAL), so a rename
