@@ -87,8 +87,15 @@ import html, re, sys
 text = open(sys.argv[1]).read()
 match = re.search(rf"^## \[{re.escape(sys.argv[2])}\].*?\n(.*?)(?=^## |\Z)", text, re.S | re.M)
 lines = [l.strip() for l in (match.group(1) if match else "").splitlines() if l.strip()]
-paragraphs = [f"<p>{html.escape(l)}</p>" for l in lines if not l.startswith("- ")]
-items = [f"<li>{html.escape(l[2:])}</li>" for l in lines if l.startswith("- ")]
+def inline(text):
+    # The CHANGELOG is Markdown: escape it, then render **bold**, `code` and [links](url).
+    text = html.escape(text, quote=False)
+    text = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", text)
+    text = re.sub(r"`([^`]+)`", r"<code>\1</code>", text)
+    text = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r'<a href="\2">\1</a>', text)
+    return text
+paragraphs = [f"<p>{inline(l)}</p>" for l in lines if not l.startswith("- ")]
+items = [f"<li>{inline(l[2:])}</li>" for l in lines if l.startswith("- ")]
 print("\n".join(paragraphs) + (f"\n<ul>{''.join(items)}</ul>" if items else ""))
 PY
 sparkle_bin="$("$project_root/scripts/sparkle-tools.sh")"
