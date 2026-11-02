@@ -317,6 +317,7 @@ private struct BrowsersSetting: View {
     @EnvironmentObject private var settings: AppSettings
     @State private var adding: BrowserKind?
     @State private var problem: String?
+    @State private var blocked: BrowserKind?
 
     var body: some View {
         let addable = Browsers.installed.filter { !settings.browsers.contains($0) }
@@ -357,20 +358,36 @@ private struct BrowsersSetting: View {
                 .foregroundStyle(.secondary)
         }
         if let problem {
-            Text(problem).font(.caption).foregroundStyle(.red)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(problem).font(.caption).foregroundStyle(.red)
+                if let blocked {
+                    Button("Open Privacy & Security") { openPrivacySettings(for: blocked) }
+                        .controlSize(.small)
+                }
+            }
         }
+    }
+
+    /// Automation for Dia (it's scripted); Privacy & Security for browsers whose data folder is read.
+    private func openPrivacySettings(for kind: BrowserKind) {
+        let pane = kind.opening == .appleScript ? "?Privacy_Automation" : ""
+        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security\(pane)")!)
     }
 
     private func add(_ kind: BrowserKind) {
         adding = kind
         problem = nil
+        blocked = nil
         Task {
             let adapter = Browsers.adapter(for: kind)
             if kind.opening == .appleScript { await adapter.ensureRunning() }
             let permission = await adapter.permission(ask: true)
             adding = nil
             guard permission == .granted else {
-                problem = "macOS didn't allow Switchyard to use \(kind.displayName). Allow it in System Settings → Privacy & Security, then add it again."
+                blocked = kind
+                problem = kind.opening == .appleScript
+                    ? "macOS didn't allow Switchyard to control \(kind.displayName). Turn on \(kind.displayName) under Switchyard in Privacy & Security → Automation, then add it again."
+                    : "macOS didn't allow Switchyard to read \(kind.displayName)'s profiles. Allow Switchyard in Privacy & Security (App Data, or Full Disk Access), then add it again."
                 return
             }
             router.setBrowsers(settings.browsers + [kind])
