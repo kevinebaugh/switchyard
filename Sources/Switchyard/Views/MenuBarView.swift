@@ -344,7 +344,8 @@ struct RecentRow: View {
     }
 }
 
-/// A suggestion at the top of Recent, in the app-rule banner's style.
+/// A suggestion at the top of Recent: an app rule, a domain rule, or letting Jev decide. Text
+/// gets the full width; the buttons sit on their own row, as on the support card.
 struct SuggestionBanner: View {
     let symbol: String
     let title: String
@@ -354,24 +355,30 @@ struct SuggestionBanner: View {
     let dismissed: () -> Void
 
     var body: some View {
-        HStack(alignment: .center, spacing: 10) {
+        HStack(alignment: .top, spacing: 10) {
             Image(systemName: symbol)
                 .foregroundStyle(.yellow)
+                .frame(width: 18)
+                .padding(.top, 1)
                 .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.callout)
-                Text(detail).font(.caption).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title).font(.callout.weight(.medium))
+                    Text(detail).font(.caption).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                HStack(spacing: 8) {
+                    Spacer()
+                    Button("Not now", action: dismissed)
+                        .controlSize(.small)
+                    Button(accept, action: accepted)
+                        .controlSize(.small)
+                        .buttonStyle(.borderedProminent)
+                }
             }
-            Spacer(minLength: 4)
-            Button("Not now", action: dismissed)
-                .controlSize(.small)
-            Button(accept, action: accepted)
-                .controlSize(.small)
-                .buttonStyle(.borderedProminent)
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 9)
+        .padding(.vertical, 10)
         .background(.yellow.opacity(0.08))
     }
 }
@@ -381,26 +388,12 @@ struct AppRuleSuggestionBanner: View {
     let suggestion: AppRuleSuggestion.Suggestion
 
     var body: some View {
-        HStack(alignment: .center, spacing: 10) {
-            Image(systemName: "lightbulb")
-                .foregroundStyle(.yellow)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Your last \(AppRuleSuggestion.streak) links from \(suggestion.source.name) opened in \(suggestion.profileName).")
-                    .font(.callout)
-                Text("Always open links from \(suggestion.source.name) there? Rules you've made or corrected still win.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer(minLength: 4)
-            Button("Not now") { router.dismissSuggestion() }
-                .controlSize(.small)
-            Button("Always") { router.acceptSuggestion() }
-                .controlSize(.small)
-                .buttonStyle(.borderedProminent)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 9)
-        .background(.yellow.opacity(0.08))
+        SuggestionBanner(
+            symbol: "lightbulb",
+            title: "Your last \(AppRuleSuggestion.streak) links from \(suggestion.source.name) opened in \(suggestion.profileName).",
+            detail: "Always open links from \(suggestion.source.name) there? Rules you've made or corrected still win.",
+            accept: "Always", accepted: router.acceptSuggestion, dismissed: router.dismissSuggestion
+        )
     }
 }
 

@@ -115,7 +115,11 @@ Switchyard is signed and notarized by Apple, and it updates itself (see [Updates
 
 **A link opened in the wrong profile.** In Recent, open the row's ↪︎ menu and choose "Should have opened in…". Switchyard reopens the link where it belongs and saves a rule. If Jev keeps guessing wrong for a kind of site, make that profile's description more specific in the Profiles tab.
 
-**Setup can't read your profiles.** Chrome, Firefox and the other Chromium browsers keep their profile list in a folder macOS protects. Allow Switchyard when macOS asks, or later in System Settings → Privacy & Security (App Data, or Full Disk Access). Dia instead needs Automation permission for Switchyard: System Settings → Privacy & Security → Automation.
+**Setup can't read your profiles.** Chrome, Firefox and the other Chromium browsers keep their profile list in a folder macOS protects. Allow Switchyard when macOS asks. If you said no, or the question never appeared, either:
+- turn on Switchyard in System Settings → Privacy & Security → **Full Disk Access** (click **+** and choose Switchyard if it isn't listed), or
+- have macOS ask again, with the narrower "data from other apps" permission: run `tccutil reset SystemPolicyAppData com.kevinebaugh.switchyard` in Terminal, then add the browser again.
+
+Dia instead needs Automation permission for Switchyard: System Settings → Privacy & Security → Automation.
 
 **"Switchyard wants to access files managed by Dropbox."** That's macOS asking on Dropbox's behalf, when your rules sync through Dropbox. Allow it, or Switchyard can't read or save your rules there.
 

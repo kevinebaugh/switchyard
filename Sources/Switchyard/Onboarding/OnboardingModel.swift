@@ -99,7 +99,7 @@ final class OnboardingModel: ObservableObject {
     var deferLabel: String? {
         switch step {
         case .defaultBrowser where !isDefaultBrowser: "Not yet"
-        case .jev where !hasKeyDraft && !keyState.isReady && keyState != .checking: "Skip: I'll pick profiles myself"
+        case .jev where !hasKeyDraft && !keyState.isReady && keyState != .checking: "Skip: I'll pick myself"
         default: nil
         }
     }
@@ -322,8 +322,7 @@ final class OnboardingModel: ObservableObject {
     }
 
     func openPrivacySettings() {
-        let pane = browser.opening == .appleScript ? "?Privacy_Automation" : ""
-        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security\(pane)")!)
+        NSWorkspace.shared.open(PermissionHelp.settingsURL(for: browser))
     }
 
     // MARK: Default browser

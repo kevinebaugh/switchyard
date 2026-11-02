@@ -340,7 +340,7 @@ private struct JevStep: View {
             StepHeader(
                 symbol: "sparkles",
                 title: "Connect Jev (optional)",
-                subtitle: "Switchyard learns from you: for a site it doesn't know, a small picker asks where it goes, once. With a TypeSafe key, Jev, TypeSafe's fast decision model, preselects its guess, and once it has matched your picks for a while, it can decide on its own."
+                subtitle: "Switchyard learns from you: the first time it sees a site, a small picker asks where it goes. With a TypeSafe key, Jev preselects its guess, and once it has matched your picks for a while, it can decide by itself."
             )
             Card {
                 switch model.keyState {
@@ -459,7 +459,7 @@ private struct PermissionStep: View {
                 subtitle: "Switchyard asks \(name) to open each link in the right profile, and to list your profiles in \(name)'s order. macOS will ask you to allow this once.",
                 action: "Allow Switchyard to Control \(name)…",
                 granted: "Switchyard can open tabs in \(name).",
-                denied: "macOS is blocking Switchyard from controlling \(name). Turn on \(name) under Switchyard in Privacy & Security → Automation.",
+                denied: PermissionHelp.instructions(for: model.browser),
                 footnote: "This lets Switchyard send commands to \(name) only. It can't see or control other apps."
             )
         case .plain:
@@ -478,7 +478,7 @@ private struct PermissionStep: View {
                 subtitle: "Switchyard reads \(name)'s profile list, and on this Mac only the sites each profile uses most, so it can set itself up. macOS will ask you to allow this once.",
                 action: "Allow Access to \(name) Profiles…",
                 granted: "Switchyard can read your \(name) profiles.",
-                denied: "macOS is blocking Switchyard from reading \(name)'s data. Allow Switchyard in System Settings → Privacy & Security (App Data, or Full Disk Access), then check again.",
+                denied: PermissionHelp.instructions(for: model.browser),
                 footnote: model.browser == .firefox
                     ? "Links open with Firefox's own profile switch, so Switchyard doesn't need to control Firefox or any other app. Each Firefox profile runs as its own window in the Dock."
                     : "Links open with \(name)'s own profile switch, so Switchyard doesn't need to control \(name) or any other app."
@@ -504,7 +504,7 @@ private struct PermissionStep: View {
                 case .denied:
                     StatusRow(kind: .problem, text: copy.denied)
                     HStack {
-                        Button("Open Privacy & Security", action: model.openPrivacySettings)
+                        Button(PermissionHelp.buttonTitle(for: model.browser), action: model.openPrivacySettings)
                         if model.browser.opensWithArguments {
                             Button("Check Again", action: model.askPermission)
                         }

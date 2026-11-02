@@ -341,3 +341,26 @@ final class PlainAdapter: BrowserAdapter, @unchecked Sendable {
         try await openInCurrentProfile(url)
     }
 }
+
+/// Where a browser's macOS permission lives, for "Open System Settings" buttons and their text.
+/// Dia is scripted (Automation). The others' profile lists sit in a folder macOS protects; the
+/// one place a person can grant that afterwards is Full Disk Access (the narrower "data from other
+/// apps" permission is only ever a prompt).
+enum PermissionHelp {
+    static func settingsURL(for kind: BrowserKind) -> URL {
+        let pane = kind.opening == .appleScript ? "Privacy_Automation" : "Privacy_AllFiles"
+        return URL(string: "x-apple.systempreferences:com.apple.preference.security?\(pane)")!
+    }
+
+    static func buttonTitle(for kind: BrowserKind) -> String {
+        kind.opening == .appleScript ? "Open Automation Settings" : "Open Full Disk Access"
+    }
+
+    /// What to do there, in plain steps.
+    static func instructions(for kind: BrowserKind) -> String {
+        if kind.opening == .appleScript {
+            return "macOS is blocking Switchyard from controlling \(kind.displayName). In Automation, find Switchyard and turn on \(kind.displayName), then try again."
+        }
+        return "macOS is blocking Switchyard from reading \(kind.displayName)'s profile list. In Full Disk Access, turn on Switchyard (if it isn't listed, click + and choose Switchyard from Applications), then try again."
+    }
+}

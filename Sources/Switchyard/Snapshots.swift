@@ -21,6 +21,7 @@ enum Snapshots {
         renderSupport(to: directory)
         renderProfiles(to: directory)
         renderPicker(to: directory)
+        renderBanners(to: directory)
 
         for step in OnboardingModel.Step.allCases {
             for variant in variants(for: step) {
@@ -191,6 +192,25 @@ enum Snapshots {
                        "Chrome · Projects": ("Chrome", "Projects"), "Safari": ("Safari", "Safari")])
         let multiView = ProfilePickerView(model: ProfilePickerModel(question: multi, waiting: 0) { _ in })
         writeBothAppearances(multiView, size: NSSize(width: 330, height: 330), to: directory, name: "picker-browsers")
+    }
+
+    /// Suggestions at the top of Recent: Jev's trust offer and a domain rule.
+    static func renderBanners(to directory: URL) {
+        let banners = VStack(spacing: 0) {
+            SuggestionBanner(
+                symbol: "sparkles",
+                title: "Jev has matched your last \(JevTrust.streakForOffer) picks.",
+                detail: "Let it open links it's confident about without asking? Unsure ones still ask, and you can change this in Settings.",
+                accept: "Let Jev Decide", accepted: {}, dismissed: {})
+            Divider()
+            SuggestionBanner(
+                symbol: "arrow.triangle.merge",
+                title: "Send all of acme.com to Work?",
+                detail: "You've sent several of its sites there. One rule can cover the rest, including new ones.",
+                accept: "Always", accepted: {}, dismissed: {})
+        }
+        .frame(width: 460)
+        writeBothAppearances(banners, size: NSSize(width: 460, height: 160), to: directory, name: "menu-banners")
     }
 
     /// The support reminder card at the top of Recent.
