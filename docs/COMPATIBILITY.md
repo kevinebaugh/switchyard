@@ -7,6 +7,7 @@ Switchyard keeps your rules, settings and history across every update, and betwe
 - **Versioned.** The file records its format version (currently 2). When the format changes, the version goes up.
 - **Older versions never overwrite newer files.** A Switchyard that finds a newer format, or a rule it can't read (say, for a browser it doesn't know yet), still routes with every rule it understands. Its Rules tab goes read-only and asks you to update, and it never writes the file. Nothing a newer Mac added can be lost.
 - **Newer versions read every older format.** Rules from version 1 files (written before Switchyard supported more than Dia) are Dia rules.
+- **Several browsers didn't change the format.** Switchyard 2's rules for several browsers, Safari included, are still format version 2: every rule already named its browser. A Mac running 1.x reads the rules for browsers it knows; a rule for a browser it doesn't know (Safari) makes it go read-only until it's updated, so nothing is lost.
 - **Edits merge rather than overwrite.** Rules are matched by ID, the newer edit wins, and deletions leave a marker for 30 days so two Macs editing at once don't lose or bring back rules.
 - **The folder can move, but only with a migration.** If a sync folder ever has to change, Switchyard merges the old location in automatically, as 0.9.7 did when it moved Dropbox rules out of `Dropbox/Apps`.
 

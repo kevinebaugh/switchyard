@@ -4,13 +4,13 @@
 
 # Switchyard
 
-**Every link on the right track in your browser.**
+**Every link in the right browser and profile.**
 
-Switchyard is a macOS menu-bar app that opens every link in the right browser profile: work links in your work profile, personal links in your personal one. It works with [Dia](https://www.diabrowser.com/), [Chrome](https://www.google.com/chrome/) and [Firefox](https://www.firefox.com/), and should work with Brave, Edge and Vivaldi.
+Switchyard is a macOS menu-bar app that opens every link where it belongs: work links in your work profile, personal links in your personal one, and, if you like, side projects in a different browser altogether. It works with [Dia](https://www.diabrowser.com/), [Chrome](https://www.google.com/chrome/), [Firefox](https://www.firefox.com/) and Safari, alone or together, and should work with Brave, Edge and Vivaldi.
 
-Most links are routed by rules on your Mac, instantly and without going online. When a link matches no rule, Switchyard asks [Jev](https://typesafe.ai/blog/introducing-system-one-models-and-jev), a fast AI model from [TypeSafe](https://typesafe.ai). Instead of writing text, Jev picks one answer from a fixed list and says how sure it is. You write a sentence about what each profile is for, and for a link like `app.shortcut.com/acme/story/12` Jev answers something like "Work, 92% sure" in a fraction of a second. Sure answers usually become rules, so the same kind of link doesn't need to ask again. Unsure ones are flagged in the menu, where one click moves the link to the right profile and can save a rule.
+**It learns from you.** For a site it doesn't know yet, a small picker appears by the cursor: press 1, 2, 3… to choose where it opens, or Esc for your default. Your answer becomes a rule, so each site is asked about once, and links that match a rule open instantly, without going online. As rules pile up, Switchyard suggests broader ones ("Send all of acme.com to Work?", "Always open links from Slack in Work?").
 
-A TypeSafe key is optional. Without one, Switchyard asks you instead: a small picker appears by the cursor for a site it doesn't know yet (press 1, 2, 3… or Esc for your default profile), and remembers your answer as a rule, so each site is asked about once. There are no reminders about not having a key.
+**Jev can help.** With a key from [TypeSafe](https://typesafe.ai), Switchyard also asks [Jev](https://typesafe.ai/blog/introducing-system-one-models-and-jev), a fast AI model that picks one answer from a fixed list and says how sure it is. You write a sentence about what each profile is for, and Jev preselects its guess in the picker ("Work, 92% sure"). Once it has matched your picks ten times in a row, Switchyard offers to let it open links it's confident about without asking. Unsure ones still ask. A key is optional, and there are no reminders about not having one.
 
 Inspired by [jdsimcoe/dia-router](https://github.com/jdsimcoe/dia-router), which routes links with hand-written rules.
 
@@ -21,10 +21,10 @@ Inspired by [jdsimcoe/dia-router](https://github.com/jdsimcoe/dia-router), which
 | Dia | Dia's AppleScript dictionary (Dia ignores Chromium's profile flag) | Automation permission for Dia | Supported |
 | Chrome | `--profile-directory`, handed to the running Chrome | Access to Chrome's data folder, to read its profiles | Supported |
 | Firefox | `-profile <folder> -new-tab`, handed to that profile's running Firefox (each Firefox profile runs as its own app) | Access to Firefox's data folder, to read its profiles | Supported |
+| Safari | Handed to Safari as is (Safari can't be told which profile to use), so it opens in Safari's front window | Nothing | Supported, as one destination |
 | Brave, Edge, Vivaldi | Same as Chrome | Same as Chrome | Should work; not yet tested |
-| Safari | Safari's scripting has no way to choose a profile | | Not possible today |
 
-You pick one browser during setup. Rules remember which browser they're for, so switching browsers later won't mix them up.
+Setup starts with one browser. Add more in **Settings → System → Browsers**: every profile of every browser there becomes a destination, in the picker, in corrections, and for Jev. Rules remember their browser, so removing one keeps its rules for later.
 
 ## How a link is routed
 

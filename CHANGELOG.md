@@ -2,6 +2,15 @@
 
 All notable changes to Switchyard. Versions follow [Semantic Versioning](https://semver.org).
 
+## [Unreleased]
+
+Switchyard 2: every link in the right browser and profile, learned from you.
+
+- **Several browsers at once.** Add browsers in Settings → System → Browsers: every profile of every browser is a destination (for example Firefox · Personal, Chrome · Projects). **Safari** is supported too, as one destination, since Safari can't be told which profile to use.
+- **Picker first.** On a new install, a site Switchyard doesn't know yet asks where it goes, once; your answer becomes a rule. With a TypeSafe key, Jev preselects its guess, and after matching your picks ten times in a row Switchyard offers to let it decide confident links itself. Upgrading from 1.x with a key? Nothing changes: Jev keeps deciding. Settings → Jev → "Jev decides".
+- **"Send all of acme.com to Work?"** After three sites on one domain go to the same place, one rule can cover the rest.
+- Your 1.x rules, descriptions and settings carry over unchanged. A Mac still on 1.x goes read-only if your rules include Safari ones, and asks to be updated (see docs/COMPATIBILITY.md).
+
 ## [1.0.1] - 2026-10-28
 
 - **When Jev is unsure, Switchyard asks.** The profile picker appears with Jev's guess marked; Esc opens the guess, and "Always for …" starts at the scope Jev suggested. Prefer the old way? Settings → Jev → "When Jev is unsure: Open its best guess".
