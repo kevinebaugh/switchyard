@@ -60,9 +60,13 @@ final class RuleStore: ObservableObject {
 
     // MARK: Mutations
 
+    /// Save a rule sending `key` to the destination labelled `profileName` ("Personal", or
+    /// "Firefox · Personal" with several browsers); stored as that browser and its own profile name.
     @discardableResult
     func upsert(key: RuleKey, profileName: String, origin: RuleOrigin) -> Rule {
-        mutate { $0.upsert(key: key, profileName: profileName, origin: origin, browser: browser) }
+        let destination = ProfilesMonitor.shared.destination(named: profileName)
+            ?? Destination(browser: AppSettings.shared.browser, profile: profileName)
+        return mutate { $0.upsert(key: key, profileName: destination.profile, origin: origin, browser: destination.browser) }
     }
 
     func update(_ rule: Rule) {
@@ -73,21 +77,21 @@ final class RuleStore: ObservableObject {
         mutate { $0.delete(id: id) }
     }
 
-    func renameProfile(from oldName: String, to newName: String) {
+    func renameProfile(from oldName: String, to newName: String, browser: BrowserKind) {
         mutate { $0.renameProfile(from: oldName, to: newName, browser: browser) }
     }
 
-    /// The selected browser's rules (rules for other browsers stay in the file, untouched).
+    /// Rules for the browsers in use (rules for other browsers stay in the file, untouched).
     var browserRules: [Rule] {
-        ruleSet.liveRules(for: browser)
+        ruleSet.liveRules.filter { browsers.contains($0.effectiveBrowser) }
     }
 
-    /// The selected browser changed: match its rules from now on.
+    /// The browsers in use changed: match their rules from now on.
     func browserChanged() {
         apply(ruleSet)
     }
 
-    private var browser: BrowserKind { AppSettings.shared.browser }
+    private var browsers: Set<BrowserKind> { Set(AppSettings.shared.browsers) }
 
     func rule(id: UUID) -> Rule? {
         rulesByID[id]
@@ -183,7 +187,7 @@ final class RuleStore: ObservableObject {
 
     private func apply(_ set: RuleSet) {
         if set != ruleSet { ruleSet = set }
-        index = RuleIndex(rules: set.liveRules, browser: browser)
+        index = RuleIndex(rules: set.liveRules, browsers: browsers)
         rulesByID = Dictionary(set.rules.map { ($0.id, $0) }, uniquingKeysWith: { _, last in last })
     }
 

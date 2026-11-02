@@ -10,6 +10,7 @@ import Foundation
 ///
 /// Each rebuilt rule is dated by the row it came from, so a newer edit elsewhere still wins.
 public enum RuleRecovery {
+    /// - Parameter browser: for records from before Switchyard 2, which don't say which browser.
     public static func rebuild(from records: [RoutingRecord], existing: Set<UUID>, browser: BrowserKind) -> [Rule] {
         var rebuilt: [UUID: Rule] = [:]
         // Evidence of how each missing rule was made, for its origin.
@@ -29,14 +30,14 @@ public enum RuleRecovery {
                let key = candidates(for: record, features: features).first(where: { $0.label.caseInsensitiveCompare(label) == .orderedSame }) {
                 rebuilt[id] = Rule(id: id, key: key, profileName: record.profileName,
                                    origin: origin(for: id, key: key, learned: learnedByJev, corrected: madeByCorrection),
-                                   browser: browser, updatedAt: record.date)
+                                   browser: record.browser ?? browser, updatedAt: record.date)
             }
 
             if case let .jev(_, scope) = record.decision, record.correctedTo == nil,
                let id = record.learnedRuleID, !existing.contains(id), rebuilt[id] == nil,
                let scope, let key = features.ruleKey(for: scope) {
                 rebuilt[id] = Rule(id: id, key: key, profileName: record.profileName, origin: .learned,
-                                   browser: browser, updatedAt: record.date)
+                                   browser: record.browser ?? browser, updatedAt: record.date)
             }
         }
         return rebuilt.values.sorted { $0.updatedAt < $1.updatedAt }

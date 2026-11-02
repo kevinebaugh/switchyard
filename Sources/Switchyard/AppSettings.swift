@@ -73,10 +73,25 @@ final class AppSettings: ObservableObject {
 
     private let defaults = AppEnvironment.defaults
 
-    /// The browser links open in. Installs from before multi-browser support are Dia.
-    @Published var browser: BrowserKind {
-        didSet { defaults.set(browser.rawValue, forKey: SettingsKey.browser.rawValue) }
+    /// Every browser links can open in (Switchyard 2), in order. The first is the original one:
+    /// its profiles keep their plain names, descriptions and rules from 1.x. Installs from 1.x
+    /// start with their one browser; installs from before multi-browser support with Dia.
+    @Published var browsers: [BrowserKind] {
+        didSet {
+            if browsers.isEmpty { browsers = [.dia]; return }
+            defaults.set(browsers.map(\.rawValue), forKey: SettingsKey.browsers.rawValue)
+            // 1.x reads this one: keep it pointing at the original browser so a downgrade works.
+            defaults.set(browsers[0].rawValue, forKey: SettingsKey.browser.rawValue)
+        }
     }
+
+    /// The original (first) browser. Setting it makes it the only one.
+    var browser: BrowserKind {
+        get { browsers.first ?? .dia }
+        set { browsers = [newValue] }
+    }
+
+    var isMultiBrowser: Bool { browsers.count > 1 }
 
     @Published var rulesLocation: RulesLocation {
         didSet { defaults.set(rulesLocation.rawValue, forKey: SettingsKey.rulesLocation.rawValue) }
@@ -114,7 +129,9 @@ final class AppSettings: ObservableObject {
     }
 
     private init() {
-        browser = defaults.string(forKey: SettingsKey.browser.rawValue).flatMap(BrowserKind.init(rawValue:)) ?? .dia
+        let legacyBrowser = defaults.string(forKey: SettingsKey.browser.rawValue).flatMap(BrowserKind.init(rawValue:)) ?? .dia
+        let stored = (defaults.stringArray(forKey: SettingsKey.browsers.rawValue) ?? []).compactMap(BrowserKind.init(rawValue:))
+        browsers = stored.isEmpty ? [legacyBrowser] : stored
         rulesLocation = defaults.string(forKey: SettingsKey.rulesLocation.rawValue).flatMap(RulesLocation.init(rawValue:))
             ?? RulesLocation.automatic
         profileThreshold = defaults.object(forKey: SettingsKey.profileThreshold.rawValue) as? Double ?? DecisionPolicy.defaultProfileThreshold
@@ -139,7 +156,19 @@ final class AppSettings: ObservableObject {
     }
 
     func description(for profileName: String) -> String {
-        profileDescriptions[profileName.lowercased()] ?? ProfileDefaults.description(for: profileName)
+        if let stored = profileDescriptions[profileName.lowercased()] { return stored }
+        // "Dia · Personal" for the original browser keeps the description "Personal" had in 1.x.
+        if let plain = plainName(ofOriginalBrowserLabel: profileName), let stored = profileDescriptions[plain.lowercased()] {
+            return stored
+        }
+        return ProfileDefaults.description(for: profileName)
+    }
+
+    /// "Personal" for "Dia · Personal" when Dia is the original browser.
+    func plainName(ofOriginalBrowserLabel label: String) -> String? {
+        let prefix = "\(browser.displayName) · "
+        guard isMultiBrowser, label.hasPrefix(prefix) else { return nil }
+        return String(label.dropFirst(prefix.count))
     }
 
     func setDescription(_ description: String, for profileName: String) {

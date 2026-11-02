@@ -91,8 +91,14 @@ enum Browsers {
         .filter(\.opensWithArguments)
         .map { ($0, LaunchArgumentsAdapter(kind: $0)) })
 
+    private static let safari = PlainAdapter(kind: .safari)
+
     static func adapter(for kind: BrowserKind) -> BrowserAdapter {
-        kind == .dia ? dia : launching[kind]!
+        switch kind.opening {
+        case .appleScript: dia
+        case .plain: safari
+        case .profileDirectoryFlag, .firefoxProfile: launching[kind]!
+        }
     }
 
     /// Supported browsers installed on this Mac, verified ones first.
@@ -312,5 +318,26 @@ final class LaunchArgumentsAdapter: BrowserAdapter, @unchecked Sendable {
         configuration.createsNewApplicationInstance = true   // `open -n`: the new process hands off and exits
         configuration.arguments = kind.launchArguments(opening: url, in: profile)
         _ = try await NSWorkspace.shared.openApplication(at: applicationURL, configuration: configuration)
+    }
+}
+
+/// Safari: Switchyard can't choose a Safari profile, so links are handed to Safari as they are and
+/// open in its front window. Nothing to read and no permission to ask for.
+final class PlainAdapter: BrowserAdapter, @unchecked Sendable {
+    let kind: BrowserKind
+    let canReadProfilesSilently = true
+
+    init(kind: BrowserKind) {
+        self.kind = kind
+    }
+
+    func prepare() {}
+
+    func permission(ask: Bool) async -> BrowserPermission { .granted }
+
+    func visibleProfileOrder() async -> [String]? { nil }
+
+    func open(_ url: URL, in profile: BrowserProfile) async throws {
+        try await openInCurrentProfile(url)
     }
 }

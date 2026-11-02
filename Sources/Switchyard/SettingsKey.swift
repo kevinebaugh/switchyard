@@ -20,6 +20,8 @@ enum SettingsKey: String, CaseIterable {
     case supportCheckoutSession
     case rejectedKeyFingerprint
     case askWhenUnsure
+    /// Switchyard 2: every browser links can open in, in order (the first is the original one).
+    case browsers
 
     /// Per-browser keys: a browser's profile order (Dia's is `diaProfileOrder`, from before
     /// other browsers), and whether setup has asked for its data folder.

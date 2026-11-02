@@ -44,25 +44,34 @@ final class Router: ObservableObject {
 
     private init() {
         apiKey = Keychain.readAPIKey()
-        profiles.onRename = { [weak self] old, new in
-            self?.rules.renameProfile(from: old, to: new)
+        profiles.onRename = { [weak self] browser, old, new in
+            self?.rules.renameProfile(from: old, to: new, browser: browser)
         }
     }
 
     func start() {
-        browser.prepare()
+        adapters.forEach { $0.prepare() }
         // Dia's profile order can wait; don't queue it ahead of the link that launched us.
         Task {
             try? await Task.sleep(for: .seconds(3))
-            await profiles.refreshVisibleOrder(using: browser)
+            for adapter in adapters { await profiles.refreshVisibleOrder(using: adapter) }
         }
         // Rules Recent points to but the rule set lacks (lost to a moved sync folder) come back
         // when the history pins them down. Deleted rules keep their tombstones, so they stay deleted.
         // Runs after any earlier rules folders are merged in, so it only rebuilds what's still missing.
         let restoreFromHistory = { [weak self] in
             guard let self else { return }
+            // History names destinations by label; rules store browser and profile.
+            let records = history.records.map { record -> RoutingRecord in
+                var copy = record
+                if let destination = profiles.destination(named: record.profileName) {
+                    copy.profileName = destination.profile
+                    copy.browser = destination.browser
+                }
+                return copy
+            }
             rules.restore(RuleRecovery.rebuild(
-                from: history.records,
+                from: records,
                 existing: Set(rules.ruleSet.rules.map(\.id)),
                 browser: settings.browser
             ))
@@ -86,15 +95,24 @@ final class Router: ObservableObject {
         }
     }
 
-    /// Switch browsers (setup's browser step): profiles, rules and notification actions follow.
+    /// Switch to one browser (setup's browser step): profiles, rules and notification actions follow.
     func selectBrowser(_ kind: BrowserKind) {
-        guard kind != settings.browser else { return }
-        settings.browser = kind
-        profiles.switchTo(kind)
+        guard settings.browsers != [kind] else { return }
+        setBrowsers([kind])
+    }
+
+    /// The browsers links can open in (Switchyard 2). The first is the original one.
+    func setBrowsers(_ kinds: [BrowserKind]) {
+        guard !kinds.isEmpty, kinds != settings.browsers else { return }
+        settings.browsers = kinds
+        profiles.setBrowsers(kinds)
         rules.browserChanged()
         notifier.registerCategories(for: profiles.names)
-        browser.prepare()
+        adapters.forEach { $0.prepare() }
     }
+
+    /// Every enabled browser's adapter.
+    var adapters: [BrowserAdapter] { settings.browsers.map(Browsers.adapter(for:)) }
 
     func setAPIKey(_ key: String) {
         Keychain.saveAPIKey(key)
@@ -107,7 +125,7 @@ final class Router: ObservableObject {
         SupportReminder.shared.syncWithOtherMacs()
         refreshAttention()
         profiles.refresh()
-        Task { await profiles.refreshVisibleOrder(using: browser) }
+        Task { for adapter in adapters { await profiles.refreshVisibleOrder(using: adapter) } }
         rules.reloadIfChangedOnDisk()
         refreshSuggestion()
         touchActivity()
@@ -204,6 +222,7 @@ final class Router: ObservableObject {
         log.info("\(url.host ?? "?", privacy: .public) → \(verdict.profileName, privacy: .public) [\(verdict.decision.badge, privacy: .public)] in \(record.latencyLabel, privacy: .public)")
 
         record.learnedRuleID = pickedRuleID
+        record.browser = profiles.destination(named: verdict.profileName)?.browser
         if let error = await open(url, in: verdict.profileName) {
             record.openError = error
         }
@@ -240,8 +259,8 @@ final class Router: ObservableObject {
         profiles.refresh()
         rules.reloadIfChangedOnDisk()
 
-        if let rule = rules.index.match(url, from: source?.bundleID, availableProfiles: profiles.availableNames) {
-            return Verdict(profileName: rule.profileName, decision: .rule(id: rule.id, label: rule.key.label), learn: nil)
+        if let rule = rules.index.match(url, from: source?.bundleID, availableDestinations: profiles.availableDestinationIDs) {
+            return Verdict(profileName: profiles.label(for: rule.destination), decision: .rule(id: rule.id, label: rule.key.label), learn: nil)
         }
 
         let fallback = fallbackProfileName
@@ -340,7 +359,7 @@ final class Router: ObservableObject {
             // Learn, unless a rule has covered this link since.
             var learnedID: UUID?
             if let learn = verdict.learn,
-               rules.index.match(record.url, from: record.sourceBundleID, availableProfiles: profiles.availableNames) == nil {
+               rules.index.match(record.url, from: record.sourceBundleID, availableDestinations: profiles.availableDestinationIDs) == nil {
                 learnedID = rules.upsert(key: learn, profileName: verdict.profileName, origin: .learned).id
             }
             for id in item.recordIDs {
@@ -359,20 +378,22 @@ final class Router: ObservableObject {
             : "Back online · Jev checked \(checked) link\(checked == 1 ? "" : "s") opened without it"
     }
 
-    /// Returns an error message if the link couldn't be opened in the requested profile.
+    /// Returns an error message if the link couldn't be opened in the requested destination
+    /// (named by its label).
     private func open(_ url: URL, in profileName: String) async -> String? {
+        let adapter = profiles.destination(named: profileName).map { Browsers.adapter(for: $0.browser) } ?? browser
         do {
-            guard let profile = profiles.profile(named: profileName) else {
-                throw BrowserLaunchError.profileNotFound(profileName, settings.browser)
+            guard let target = profiles.target(named: profileName) else {
+                throw BrowserLaunchError.profileNotFound(profileName, adapter.kind)
             }
-            try await browser.open(url, in: profile)
+            try await adapter.open(url, in: target.profile)
             return nil
         } catch {
             let message = error.localizedDescription
             log.error("Open failed: \(message, privacy: .public)")
             notifier.notifySetupProblem(message)
-            // Never lose the link: fall back to whatever profile Dia has focused.
-            try? await browser.openInCurrentProfile(url)
+            // Never lose the link: fall back to whatever profile the browser has focused.
+            try? await adapter.openInCurrentProfile(url)
             return message
         }
     }
@@ -410,7 +431,10 @@ final class Router: ObservableObject {
             savedRuleID = rules.upsert(key: key, profileName: profileName, origin: .corrected).id
         }
         history.update(id: recordID) {
-            if !alreadyThere { $0.correctedTo = profileName }
+            if !alreadyThere {
+                $0.correctedTo = profileName
+                $0.correctedBrowser = self.profiles.destination(named: profileName)?.browser
+            }
             if let savedRuleID { $0.learnedRuleID = savedRuleID }
         }
         refreshSuggestion()
