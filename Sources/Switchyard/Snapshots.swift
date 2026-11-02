@@ -22,6 +22,7 @@ enum Snapshots {
         renderProfiles(to: directory)
         renderPicker(to: directory)
         renderBanners(to: directory)
+        renderSettings(to: directory)
 
         for step in OnboardingModel.Step.allCases {
             for variant in variants(for: step) {
@@ -211,6 +212,20 @@ enum Snapshots {
         }
         .frame(width: 460)
         writeBothAppearances(banners, size: NSSize(width: 460, height: 160), to: directory, name: "menu-banners")
+    }
+
+    /// The whole Settings tab, unscrolled, to judge its density.
+    static func renderSettings(to directory: URL) {
+        for (advanced, name, height) in [(false, "settings", 760.0), (true, "settings-advanced", 1100.0)] {
+            let view = SettingsView(showsAdvanced: advanced)
+                .frame(width: 460, height: height)
+                .environmentObject(Router.shared)
+                .environmentObject(RuleStore.shared)
+                .environmentObject(ProfilesMonitor.shared)
+                .environmentObject(AppSettings.shared)
+                .environmentObject(HistoryStore.shared)
+            writeBothAppearances(view, size: NSSize(width: 460, height: height), to: directory, name: name)
+        }
     }
 
     /// The support reminder card at the top of Recent.

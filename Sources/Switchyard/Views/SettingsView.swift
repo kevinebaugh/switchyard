@@ -11,7 +11,7 @@ struct SettingsView: View {
     @ObservedObject private var support = SupportReminder.shared
 
     @State private var apiKeyDraft = ""
-    @State private var testURL = "https://app.shortcut.com/acme/story/1"
+    @State private var testURL = ""
     @State private var testResult: String?
     @State private var isTesting = false
     @State private var isDefaultBrowser = DefaultBrowser.isDefault
@@ -20,87 +20,15 @@ struct SettingsView: View {
     @State private var notificationAccess: Notifier.Access?
     @State private var copiedDiagnostics = false
 
+    @State private var showsAdvanced: Bool
+
+    init(showsAdvanced: Bool = false) {
+        _showsAdvanced = State(initialValue: showsAdvanced)
+    }
+
     var body: some View {
         Form {
-            Section("Jev") {
-                HStack {
-                    SecureField(router.hasAPIKey ? "API key saved in Keychain" : "TypeSafe API key", text: $apiKeyDraft)
-                        .onSubmit(saveKey)
-                    Button(router.hasAPIKey && apiKeyDraft.isEmpty ? "Remove" : "Save", action: saveKey)
-                        .disabled(!router.hasAPIKey && apiKeyDraft.isEmpty)
-                }
-                if !router.hasAPIKey {
-                    HStack {
-                        Text("Optional. Without a key, Switchyard asks where each new site should open and remembers your answer. With one, Jev picks for you.")
-                            .foregroundStyle(.secondary)
-                        Link("Get a key", destination: URL(string: "https://console.typesafe.ai/keys")!)
-                    }
-                    .font(.caption)
-                } else if router.isAPIKeyRejected {
-                    Label("TypeSafe rejected this key. Paste a working one, or remove it to have Switchyard ask instead.", systemImage: "exclamationmark.triangle.fill")
-                        .font(.caption)
-                        .foregroundStyle(.orange)
-                }
-                LabeledContent("Learn a rule at confidence") {
-                    HStack {
-                        Slider(value: $settings.profileThreshold, in: 0.5...0.95, step: 0.05)
-                        Text(String(format: "%.2f", settings.profileThreshold))
-                            .monospacedDigit()
-                            .frame(width: 34)
-                    }
-                }
-                Picker("Jev decides", selection: Binding(
-                    get: { router.jevDecides },
-                    set: { router.setJevDecides($0) }
-                )) {
-                    Text("Only suggests (you pick)").tag(false)
-                    Text("Links it's confident about").tag(true)
-                }
-                .disabled(!router.hasAPIKey)
-                Picker("When Jev is unsure", selection: $settings.askWhenUnsure) {
-                    Text("Ask me").tag(true)
-                    Text("Open its best guess").tag(false)
-                }
-                LabeledContent("Profile descriptions") {
-                    Button("Edit in Profiles") { MenuNavigation.shared.tab = .profiles }
-                }
-            }
-
-            Section("Test a link") {
-                HStack {
-                    TextField("URL", text: $testURL)
-                        .onSubmit(runTest)
-                    Button(isTesting ? "…" : "Test", action: runTest)
-                        .disabled(isTesting || URL(string: testURL)?.host == nil)
-                }
-                if let testResult {
-                    Text(testResult)
-                        .font(.caption.monospaced())
-                        .textSelection(.enabled)
-                }
-            }
-
-            Section("Rules sync") {
-                Picker("Rules folder", selection: Binding(
-                    get: { settings.rulesLocation },
-                    set: { newValue in
-                        rules.move(to: newValue)
-                        settings.rulesLocation = newValue
-                    }
-                )) {
-                    ForEach(RulesLocation.allCases) { location in
-                        Text(location.label + (location.isAvailable ? "" : " (not set up)"))
-                            .tag(location)
-                            .disabled(!location.isAvailable)
-                    }
-                }
-                Text(rules.fileURL.path.replacingOccurrences(of: NSHomeDirectory(), with: "~"))
-                    .font(.caption.monospaced())
-                    .foregroundStyle(.secondary)
-                    .textSelection(.enabled)
-            }
-
-            Section("System") {
+            Section("General") {
                 BrowsersSetting()
                 LabeledContent("Default browser") {
                     if isDefaultBrowser {
@@ -134,101 +62,148 @@ struct SettingsView: View {
                         launchAtLogin = LoginItem.isEnabled
                     }
                 ))
-                HStack {
-                    Button("Run Setup Again…") { OnboardingWindow.shared.show() }
-                    Spacer()
-                    Button("About Switchyard") { AboutPanel.show() }
-                }
-                HStack {
-                    Button("Copy Diagnostics") { Task { await copyDiagnostics() } }
-                        .help("Copies app, browser and permission details for a bug report. No links, profile names or keys.")
-                    if copiedDiagnostics {
-                        Label("Copied: paste it into a GitHub issue", systemImage: "checkmark.circle.fill")
-                            .font(.caption)
-                            .foregroundStyle(.green)
-                    }
+                Toggle("Notify on fallbacks, outages and errors", isOn: $settings.notificationsEnabled)
+                if settings.notificationsEnabled {
+                    notificationAccessRow
                 }
                 if let systemError {
                     Text(systemError).font(.caption).foregroundStyle(.red)
                 }
             }
 
+            Section("Jev") {
+                HStack {
+                    SecureField(router.hasAPIKey ? "API key saved in Keychain" : "TypeSafe API key", text: $apiKeyDraft)
+                        .onSubmit(saveKey)
+                    Button(router.hasAPIKey && apiKeyDraft.isEmpty ? "Remove" : "Save", action: saveKey)
+                        .disabled(!router.hasAPIKey && apiKeyDraft.isEmpty)
+                }
+                if !router.hasAPIKey {
+                    HStack {
+                        Text("Optional. Without a key, Switchyard asks where each new site should open and remembers your answer.")
+                            .foregroundStyle(.secondary)
+                        Link("Get a key", destination: URL(string: "https://console.typesafe.ai/keys")!)
+                    }
+                    .font(.caption)
+                } else {
+                    if router.isAPIKeyRejected {
+                        Label("TypeSafe rejected this key. Paste a working one, or remove it to have Switchyard ask instead.", systemImage: "exclamationmark.triangle.fill")
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                    }
+                    Picker("Jev decides", selection: Binding(
+                        get: { router.jevDecides },
+                        set: { router.setJevDecides($0) }
+                    )) {
+                        Text("Only suggests (you pick)").tag(false)
+                        Text("Links it's confident about").tag(true)
+                    }
+                    Picker("When Jev is unsure", selection: $settings.askWhenUnsure) {
+                        Text("Ask me").tag(true)
+                        Text("Open its best guess").tag(false)
+                    }
+                }
+            }
+
             if support.isEnabled {
-                Section("Support") {
+                Section {
                     if support.isSupporter {
                         Label("Thank you for supporting Switchyard.", systemImage: "heart.fill")
                             .foregroundStyle(.pink)
                     } else {
                         HStack {
-                            Text("Free and open source. Pay what you want, once.")
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Free and open source. Pay what you want, once.")
+                                Label {
+                                    Text(SupportReminder.climateNote).foregroundStyle(.secondary)
+                                } icon: {
+                                    Image(systemName: "leaf.fill").foregroundStyle(.green)
+                                }
+                                .font(.caption)
+                            }
                             Spacer()
                             Button("Support…") { support.openCheckout() }
                         }
-                        HStack {
-                            Label {
-                                Text(SupportReminder.climateNote).foregroundStyle(.secondary)
-                            } icon: {
-                                Image(systemName: "leaf.fill").foregroundStyle(.green)
-                            }
-                            Spacer()
-                        }
-                        .font(.caption)
-                        Link("Paid but still seeing reminders?", destination: SupportReminder.paidButStillSeeingURL)
-                            .font(.caption)
                     }
                 }
             }
 
-            Section {
-                LabeledContent("Version", value: Self.versionString)
+            Section("Advanced", isExpanded: $showsAdvanced) {
+                LabeledContent("Learn a rule at confidence") {
+                    HStack {
+                        Slider(value: $settings.profileThreshold, in: 0.5...0.95, step: 0.05)
+                        Text(String(format: "%.2f", settings.profileThreshold))
+                            .monospacedDigit()
+                            .frame(width: 34)
+                    }
+                }
+                .disabled(!router.hasAPIKey)
+                Toggle("Also notify when Jev is unsure", isOn: $settings.notifyLowConfidence)
+                    .disabled(!settings.notificationsEnabled || !router.hasAPIKey)
+                Picker("Rules folder", selection: Binding(
+                    get: { settings.rulesLocation },
+                    set: { newValue in
+                        rules.move(to: newValue)
+                        settings.rulesLocation = newValue
+                    }
+                )) {
+                    ForEach(RulesLocation.allCases) { location in
+                        Text(location.label + (location.isAvailable ? "" : " (not set up)"))
+                            .tag(location)
+                            .disabled(!location.isAvailable)
+                    }
+                }
+                Text(rules.fileURL.path.replacingOccurrences(of: NSHomeDirectory(), with: "~"))
+                    .font(.caption.monospaced())
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .textSelection(.enabled)
+                LabeledContent("Test a link") {
+                    HStack {
+                        TextField("URL", text: $testURL, prompt: Text("https://…"))
+                            .labelsHidden()
+                            .onSubmit(runTest)
+                        Button(isTesting ? "…" : "Test", action: runTest)
+                            .disabled(isTesting || URL(string: testURL)?.host == nil)
+                    }
+                }
+                if let testResult {
+                    Text(testResult)
+                        .font(.caption.monospaced())
+                        .textSelection(.enabled)
+                }
                 if updates.isAvailable {
                     Toggle("Check for updates automatically", isOn: $updates.automaticallyChecks)
-                    Button("Check for Updates…", action: updates.checkForUpdates)
-                        .disabled(!updates.canCheck)
-                } else {
-                    Text("Updates are off in this build (it isn't set up for releases).")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
                 }
-            } header: {
-                Text("Updates")
+                HStack {
+                    Button("Run Setup Again…") { OnboardingWindow.shared.show() }
+                    Button("Copy Diagnostics") { Task { await copyDiagnostics() } }
+                        .help("Copies app, browser and permission details for a bug report. No links, profile names or keys.")
+                    Spacer()
+                    if copiedDiagnostics {
+                        Label("Copied", systemImage: "checkmark.circle.fill")
+                            .font(.caption)
+                            .foregroundStyle(.green)
+                    }
+                }
+                if support.isEnabled, !support.isSupporter {
+                    Link("Paid but still seeing support reminders?", destination: SupportReminder.paidButStillSeeingURL)
+                        .font(.caption)
+                }
             }
 
             Section {
-                LabeledContent("macOS") {
-                    switch notificationAccess {
-                    case nil:
-                        ProgressView().controlSize(.small)
-                    case .allowed:
-                        Label("Allowed", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
-                    case .quiet:
-                        HStack {
-                            Text("Allowed, but banners are off").foregroundStyle(.orange)
-                            Button("Open Settings…", action: Notifier.openSystemSettings)
-                        }
-                    case .denied:
-                        HStack {
-                            Text("Off for Switchyard").foregroundStyle(.orange)
-                            Button("Open Settings…", action: Notifier.openSystemSettings)
-                        }
-                    case .notAsked:
-                        Button("Allow Notifications…") {
-                            Task {
-                                await Notifier.shared.requestAuthorizationNow()
-                                notificationAccess = await Notifier.shared.access()
-                            }
-                        }
+                HStack {
+                    Text("Switchyard \(Self.versionString)")
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    if updates.isAvailable {
+                        Button("Check for Updates…", action: updates.checkForUpdates)
+                            .disabled(!updates.canCheck)
                     }
+                    Button("About") { AboutPanel.show() }
                 }
-                Toggle("Notify on fallbacks, outages and errors", isOn: $settings.notificationsEnabled)
-                Toggle("Also notify when Jev is unsure", isOn: $settings.notifyLowConfidence)
-                    .disabled(!settings.notificationsEnabled)
-            } header: {
-                Text("Notifications")
-            } footer: {
-                Text("A Focus can hold notifications back; they still collect in Notification Center.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
@@ -240,6 +215,38 @@ struct SettingsView: View {
         .task { notificationAccess = await Notifier.shared.access() }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             Task { notificationAccess = await Notifier.shared.access() }
+        }
+    }
+
+    /// Shown only when macOS is holding notifications back.
+    @ViewBuilder private var notificationAccessRow: some View {
+        switch notificationAccess {
+        case nil, .allowed:
+            EmptyView()
+        case .quiet:
+            HStack {
+                Text("macOS allows them, but banners are off").font(.caption).foregroundStyle(.orange)
+                Spacer()
+                Button("Open Settings…", action: Notifier.openSystemSettings).controlSize(.small)
+            }
+        case .denied:
+            HStack {
+                Text("macOS has notifications off for Switchyard").font(.caption).foregroundStyle(.orange)
+                Spacer()
+                Button("Open Settings…", action: Notifier.openSystemSettings).controlSize(.small)
+            }
+        case .notAsked:
+            HStack {
+                Text("macOS hasn't been asked yet").font(.caption).foregroundStyle(.secondary)
+                Spacer()
+                Button("Allow Notifications…") {
+                    Task {
+                        await Notifier.shared.requestAuthorizationNow()
+                        notificationAccess = await Notifier.shared.access()
+                    }
+                }
+                .controlSize(.small)
+            }
         }
     }
 
@@ -353,11 +360,6 @@ private struct BrowsersSetting: View {
                 }
             }
         }
-        if settings.isMultiBrowser {
-            Text("Each profile of every browser here is a destination: in the picker, in corrections, and for Jev. Safari opens links in its front window.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
         if let problem {
             VStack(alignment: .leading, spacing: 6) {
                 Text(problem).font(.caption).foregroundStyle(.red)
@@ -371,8 +373,6 @@ private struct BrowsersSetting: View {
             }
         }
     }
-
-
 
     private func add(_ kind: BrowserKind) {
         adding = kind
