@@ -162,6 +162,7 @@ extension RoutingRecord {
 struct RecentView: View {
     @EnvironmentObject private var history: HistoryStore
     @EnvironmentObject private var router: Router
+    @EnvironmentObject private var profiles: ProfilesMonitor
     @ObservedObject private var support = SupportReminder.shared
 
     var body: some View {
@@ -184,6 +185,26 @@ struct RecentView: View {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     if support.isShowingCard {
                         SupportCard()
+                        Divider()
+                    }
+                    if router.jevTrustOffer {
+                        SuggestionBanner(
+                            symbol: "sparkles",
+                            title: "Jev has matched your last \(JevTrust.streakForOffer) picks.",
+                            detail: "Let it open links it's confident about without asking? Unsure ones still ask, and you can change this in Settings.",
+                            accept: "Let Jev Decide", accepted: { router.setJevDecides(true) },
+                            dismissed: router.dismissJevTrustOffer
+                        )
+                        Divider()
+                    }
+                    if let suggestion = router.domainSuggestion {
+                        SuggestionBanner(
+                            symbol: "arrow.triangle.merge",
+                            title: "Send all of \(suggestion.domain) to \(profiles.label(for: suggestion.destination))?",
+                            detail: "You've sent several of its sites there. One rule can cover the rest, including new ones.",
+                            accept: "Always", accepted: router.acceptDomainSuggestion,
+                            dismissed: router.dismissDomainSuggestion
+                        )
                         Divider()
                     }
                     if let suggestion = router.appRuleSuggestion {
@@ -320,6 +341,38 @@ struct RecentRow: View {
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(record.url.absoluteString, forType: .string)
         }
+    }
+}
+
+/// A suggestion at the top of Recent, in the app-rule banner's style.
+struct SuggestionBanner: View {
+    let symbol: String
+    let title: String
+    let detail: String
+    let accept: String
+    let accepted: () -> Void
+    let dismissed: () -> Void
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 10) {
+            Image(systemName: symbol)
+                .foregroundStyle(.yellow)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.callout)
+                Text(detail).font(.caption).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 4)
+            Button("Not now", action: dismissed)
+                .controlSize(.small)
+            Button(accept, action: accepted)
+                .controlSize(.small)
+                .buttonStyle(.borderedProminent)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
+        .background(.yellow.opacity(0.08))
     }
 }
 

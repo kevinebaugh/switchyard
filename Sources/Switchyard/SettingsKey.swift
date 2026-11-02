@@ -22,6 +22,9 @@ enum SettingsKey: String, CaseIterable {
     case askWhenUnsure
     /// Switchyard 2: every browser links can open in, in order (the first is the original one).
     case browsers
+    /// Switchyard 2: whether Jev decides confident links, and the agreement streak (JSON).
+    case jevTrust
+    case dismissedDomainSuggestions
 
     /// Per-browser keys: a browser's profile order (Dia's is `diaProfileOrder`, from before
     /// other browsers), and whether setup has asked for its data folder.

@@ -340,7 +340,7 @@ private struct JevStep: View {
             StepHeader(
                 symbol: "sparkles",
                 title: "Connect Jev (optional)",
-                subtitle: "With a TypeSafe key, Jev, TypeSafe's fast decision model, picks the profile for sites Switchyard hasn't learned yet, and its confident answers become rules. Without one, Switchyard asks you instead: a small picker, once per site."
+                subtitle: "Switchyard learns from you: for a site it doesn't know, a small picker asks where it goes, once. With a TypeSafe key, Jev, TypeSafe's fast decision model, preselects its guess, and once it has matched your picks for a while, it can decide on its own."
             )
             Card {
                 switch model.keyState {

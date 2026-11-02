@@ -93,6 +93,17 @@ final class AppSettings: ObservableObject {
 
     var isMultiBrowser: Bool { browsers.count > 1 }
 
+    /// Whether Jev decides confident links on its own, and how close it is to being offered that.
+    /// Nil until first set: Router decides then (1.x users with a key keep Jev deciding; new
+    /// installs start with Jev only suggesting).
+    @Published var jevTrust: JevTrust? {
+        didSet {
+            if let jevTrust, let data = try? JSONEncoder().encode(jevTrust) {
+                defaults.set(data, forKey: SettingsKey.jevTrust.rawValue)
+            }
+        }
+    }
+
     @Published var rulesLocation: RulesLocation {
         didSet { defaults.set(rulesLocation.rawValue, forKey: SettingsKey.rulesLocation.rawValue) }
     }
@@ -141,6 +152,7 @@ final class AppSettings: ObservableObject {
         profileDescriptions = defaults.dictionary(forKey: SettingsKey.profileDescriptions.rawValue) as? [String: String] ?? [:]
         onboardingCompleted = defaults.bool(forKey: SettingsKey.onboardingCompleted.rawValue)
         askWhenUnsure = defaults.object(forKey: SettingsKey.askWhenUnsure.rawValue) as? Bool ?? true
+        jevTrust = defaults.data(forKey: SettingsKey.jevTrust.rawValue).flatMap { try? JSONDecoder().decode(JevTrust.self, from: $0) }
 
         // Persist the automatic choice so the rules file doesn't move if another provider appears later.
         defaults.set(rulesLocation.rawValue, forKey: SettingsKey.rulesLocation.rawValue)

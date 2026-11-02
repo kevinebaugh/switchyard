@@ -50,6 +50,7 @@ final class Router: ObservableObject {
     }
 
     func start() {
+        settleJevTrust()
         adapters.forEach { $0.prepare() }
         // Dia's profile order can wait; don't queue it ahead of the link that launched us.
         Task {
@@ -174,39 +175,76 @@ final class Router: ObservableObject {
         touchActivity()
 
         var verdict: Verdict
+        let features = LinkFeatures(url: url)
+        let scopes = (features?.correctionOptions ?? []) + (source.map { [RuleKey.app($0)] } ?? [])
+        var pickedRuleID: UUID?
+        var asked = false
+        var milliseconds: Double
+
         if let forcedProfile, let name = profiles.profileName(matching: forcedProfile) {
             verdict = Verdict(profileName: name, decision: .explicit, learn: nil)
+            milliseconds = started.duration(to: clock.now).milliseconds
+        } else if let ruleVerdict = matchRule(url, source: source) {
+            verdict = ruleVerdict
+            milliseconds = started.duration(to: clock.now).milliseconds
+        } else if apiKey != nil, !jevDecides, profiles.names.count > 1, url.scheme.map({ ["http", "https"].contains($0.lowercased()) }) ?? false {
+            // Picker first: Jev hasn't earned deciding on its own yet. Ask now; Jev is asked in
+            // parallel and its guess fills in when it arrives.
+            milliseconds = started.duration(to: clock.now).milliseconds
+            let jev = Task { await self.decide(url, source: source) }
+            let laterGuess = Task { () -> ProfilePicker.Guess? in
+                let jevVerdict = await jev.value
+                switch jevVerdict.decision {
+                case let .jev(confidence, scope):
+                    return .init(profile: jevVerdict.profileName, confidence: confidence, scope: scope.flatMap { features?.ruleKey(for: $0) })
+                case let .lowConfidence(confidence):
+                    return .init(profile: jevVerdict.profileName, confidence: confidence, scope: jevVerdict.learnScope.flatMap { features?.ruleKey(for: $0) })
+                default:
+                    return nil
+                }
+            }
+            let answer = await ProfilePicker.shared.ask(question(for: url, defaultProfile: fallbackProfileName, scopes: scopes), laterGuess: laterGuess)
+            asked = true
+            if let answer {
+                if let key = answer.remember {
+                    pickedRuleID = rules.upsert(key: key, profileName: answer.profileName, origin: .corrected).id
+                }
+                verdict = Verdict(profileName: answer.profileName, decision: .asked(remembered: answer.remember != nil), learn: nil)
+                // The link doesn't wait for Jev; whether you agreed with a confident guess is
+                // tallied once Jev has answered.
+                Task { [weak self] in
+                    let jevVerdict = await jev.value
+                    if case .jev = jevVerdict.decision {
+                        self?.recordJevPick(guess: jevVerdict.profileName, picked: answer.profileName)
+                    }
+                }
+            } else {
+                // Esc: Jev's guess when it had one (nothing learned), otherwise the fallback.
+                let jevVerdict = await jev.value
+                verdict = Verdict(profileName: jevVerdict.profileName, decision: jevVerdict.decision, learn: nil)
+            }
         } else {
             verdict = await decide(url, source: source)
+            // Decision time only; time spent answering the picker isn't Switchyard's.
+            milliseconds = started.duration(to: clock.now).milliseconds
         }
-        // Decision time only; time spent answering the picker isn't Switchyard's.
-        let milliseconds = started.duration(to: clock.now).milliseconds
 
         // No key, or Jev unsure: ask, and remember the answer if you like.
-        var pickedRuleID: UUID?
         var question: ProfilePicker.Question?
-        if profiles.names.count > 1 {
-            let features = LinkFeatures(url: url)
-            let scopes = (features?.correctionOptions ?? []) + (source.map { [RuleKey.app($0)] } ?? [])
+        if !asked, profiles.names.count > 1 {
             switch verdict.decision {
             case .fallback(.noAPIKey):
-                question = ProfilePicker.Question(url: url, profiles: profiles.names,
-                                                  defaultProfile: verdict.profileName, scopes: scopes)
+                question = self.question(for: url, defaultProfile: verdict.profileName, scopes: scopes)
             case let .lowConfidence(confidence) where settings.askWhenUnsure:
-                question = ProfilePicker.Question(url: url, profiles: profiles.names,
-                                                  defaultProfile: verdict.profileName, scopes: scopes,
-                                                  jevGuess: (verdict.profileName, confidence),
-                                                  preferredScope: verdict.learnScope.flatMap { features?.ruleKey(for: $0) })
+                var unsure = self.question(for: url, defaultProfile: verdict.profileName, scopes: scopes)
+                unsure.jevGuess = (verdict.profileName, confidence)
+                unsure.preferredScope = verdict.learnScope.flatMap { features?.ruleKey(for: $0) }
+                question = unsure
             default:
                 break
             }
         }
-        if var question {
-            if profiles.isMultiBrowser {
-                question.sections = Dictionary(uniqueKeysWithValues: profiles.destinations.map {
-                    (profiles.label(for: $0), (browser: $0.browser.displayName, name: $0.profile))
-                })
-            }
+        if let question {
             if let answer = await ProfilePicker.shared.ask(question) {
                 if let key = answer.remember {
                     pickedRuleID = rules.upsert(key: key, profileName: answer.profileName, origin: .corrected).id
@@ -257,6 +295,57 @@ final class Router: ObservableObject {
             notifier.notify(about: record)
         }
         SupportReminder.shared.linkRouted()
+    }
+
+    /// A rule's verdict for this link, if any rule covers it.
+    private func matchRule(_ url: URL, source: SourceApp?) -> Verdict? {
+        profiles.refresh()
+        rules.reloadIfChangedOnDisk()
+        guard let rule = rules.index.match(url, from: source?.bundleID, availableDestinations: profiles.availableDestinationIDs) else { return nil }
+        return Verdict(profileName: profiles.label(for: rule.destination), decision: .rule(id: rule.id, label: rule.key.label), learn: nil)
+    }
+
+    /// The picker's question for a link: every destination, grouped by browser when there are several.
+    private func question(for url: URL, defaultProfile: String, scopes: [RuleKey]) -> ProfilePicker.Question {
+        var question = ProfilePicker.Question(url: url, profiles: profiles.names, defaultProfile: defaultProfile, scopes: scopes)
+        if profiles.isMultiBrowser {
+            question.sections = Dictionary(uniqueKeysWithValues: profiles.destinations.map {
+                (profiles.label(for: $0), (browser: $0.browser.displayName, name: $0.profile))
+            })
+        }
+        return question
+    }
+
+    // MARK: Jev's trust
+
+    /// Whether Jev decides confident links itself, or only suggests in the picker.
+    var jevDecides: Bool { settings.jevTrust?.decidesConfidentLinks ?? true }
+
+    /// "Jev has matched your last 10 picks…": shown at the top of Recent.
+    @Published private(set) var jevTrustOffer = false
+
+    /// Picker-first is for new installs. Someone upgrading from 1.x with a working key keeps Jev
+    /// deciding, so nothing changes under them.
+    private func settleJevTrust() {
+        guard settings.jevTrust == nil else { return }
+        settings.jevTrust = JevTrust(decidesConfidentLinks: hasAPIKey && settings.onboardingCompleted)
+    }
+
+    private func recordJevPick(guess: String, picked: String) {
+        var trust = settings.jevTrust ?? JevTrust(decidesConfidentLinks: false)
+        if trust.recordPick(jevGuess: guess, picked: picked) { jevTrustOffer = true }
+        settings.jevTrust = trust
+    }
+
+    func setJevDecides(_ decides: Bool) {
+        var trust = settings.jevTrust ?? JevTrust(decidesConfidentLinks: decides)
+        trust.decidesConfidentLinks = decides
+        settings.jevTrust = trust
+        jevTrustOffer = false
+    }
+
+    func dismissJevTrustOffer() {
+        jevTrustOffer = false
     }
 
     /// The routing decision without side effects (other than calling Jev). Also used by "Test URL".
@@ -486,6 +575,31 @@ final class Router: ObservableObject {
             dismissed: dismissedSuggestions
         )
         if suggestion != appRuleSuggestion { appRuleSuggestion = suggestion }
+
+        let dismissedDomains = Set(AppEnvironment.defaults.stringArray(forKey: SettingsKey.dismissedDomainSuggestions.rawValue) ?? [])
+        let domain = DomainRuleSuggestion.suggest(rules: rules.browserRules, dismissed: dismissedDomains)
+        if domain != domainSuggestion { domainSuggestion = domain }
+    }
+
+    // MARK: Domain suggestions
+
+    /// "Send all of acme.com to Work?": three or more single-host rules agreeing on one domain.
+    @Published private(set) var domainSuggestion: DomainRuleSuggestion.Suggestion?
+
+    func acceptDomainSuggestion() {
+        guard let suggestion = domainSuggestion else { return }
+        let label = profiles.label(for: suggestion.destination)
+        rules.upsert(key: suggestion.key, profileName: label, origin: .manual)
+        status = "Saved: all of \(suggestion.domain) → \(label)"
+        refreshSuggestion()
+    }
+
+    func dismissDomainSuggestion() {
+        guard let suggestion = domainSuggestion else { return }
+        let key = SettingsKey.dismissedDomainSuggestions.rawValue
+        let dismissed = Set(AppEnvironment.defaults.stringArray(forKey: key) ?? []).union([suggestion.dismissalKey])
+        AppEnvironment.defaults.set(Array(dismissed).sorted(), forKey: key)
+        refreshSuggestion()
     }
 
     func acceptSuggestion() {

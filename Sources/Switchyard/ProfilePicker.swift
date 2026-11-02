@@ -31,20 +31,38 @@ final class ProfilePicker {
         let remember: RuleKey?
     }
 
-    private var panel: PickerPanel?
-    private var queue: [(question: Question, continuation: CheckedContinuation<Answer?, Never>)] = []
+    /// Jev's guess, when it arrives after the picker is already open.
+    struct Guess: Sendable {
+        let profile: String
+        let confidence: Double
+        let scope: RuleKey?
+    }
 
-    /// The profile to open `question.url` in, or nil for the default profile (Esc).
-    func ask(_ question: Question) async -> Answer? {
+    private var panel: PickerPanel?
+    private var queue: [(question: Question, guess: Task<Guess?, Never>?, continuation: CheckedContinuation<Answer?, Never>)] = []
+    private var shownModel: ProfilePickerModel?
+
+    /// The profile to open `question.url` in, or nil for the default profile (Esc). `laterGuess`
+    /// fills in Jev's guess while the picker is open (it's asked in parallel, so the picker never
+    /// waits for it).
+    func ask(_ question: Question, laterGuess: Task<Guess?, Never>? = nil) async -> Answer? {
         await withCheckedContinuation { continuation in
-            queue.append((question, continuation))
-            if queue.count == 1 { show(question) }
+            queue.append((question, laterGuess, continuation))
+            if queue.count == 1 { show(question, laterGuess: laterGuess) }
         }
     }
 
-    private func show(_ question: Question) {
+    private func show(_ question: Question, laterGuess: Task<Guess?, Never>?) {
         let model = ProfilePickerModel(question: question, waiting: queue.count - 1) { [weak self] answer in
             self?.answer(answer)
+        }
+        shownModel = model
+        if let laterGuess {
+            Task { [weak self] in
+                guard let guess = await laterGuess.value, self?.shownModel === model else { return }
+                model.apply(guess)
+                self?.panel?.setContentSize(self?.panel?.contentView?.fittingSize ?? .zero)
+            }
         }
         let panel = self.panel ?? PickerPanel()
         self.panel = panel
@@ -60,11 +78,12 @@ final class ProfilePicker {
 
     private func answer(_ answer: Answer?) {
         guard !queue.isEmpty else { return }
-        let (_, continuation) = queue.removeFirst()
+        let (_, _, continuation) = queue.removeFirst()
         continuation.resume(returning: answer)
         if let next = queue.first {
-            show(next.question)
+            show(next.question, laterGuess: next.guess)
         } else {
+            shownModel = nil
             panel?.orderOut(nil)
         }
     }
@@ -106,14 +125,38 @@ final class ProfilePickerModel: ObservableObject {
     let question: ProfilePicker.Question
     let waiting: Int
     @Published var remember = true
-    @Published var scope: RuleKey?
+    @Published var scope: RuleKey? {
+        didSet { if !applyingGuess { scopeChosen = true } }
+    }
+    /// Jev's guess: from the question, or arriving while the picker is open.
+    @Published private(set) var jevGuess: (profile: String, confidence: Double)?
+    private var scopeChosen = false
+    private var applyingGuess = false
     private let done: (ProfilePicker.Answer?) -> Void
 
     init(question: ProfilePicker.Question, waiting: Int, done: @escaping (ProfilePicker.Answer?) -> Void) {
         self.question = question
         self.waiting = waiting
         self.done = done
+        jevGuess = question.jevGuess
+        applyingGuess = true
         scope = question.preferredScope.flatMap { question.scopes.contains($0) ? $0 : nil } ?? question.scopes.first
+        applyingGuess = false
+    }
+
+    /// What Esc opens: Jev's guess once there is one, otherwise the default profile.
+    var escapeProfile: String { jevGuess?.profile ?? question.defaultProfile }
+
+    /// Jev answered while the picker was open: mark its guess, and take its scope unless you've
+    /// already chosen one.
+    func apply(_ guess: ProfilePicker.Guess) {
+        guard question.profiles.contains(where: { $0.caseInsensitiveCompare(guess.profile) == .orderedSame }) else { return }
+        jevGuess = (guess.profile, guess.confidence)
+        if !scopeChosen, let key = guess.scope, question.scopes.contains(key) {
+            applyingGuess = true
+            scope = key
+            applyingGuess = false
+        }
     }
 
     func pick(_ profile: String) {
@@ -180,7 +223,7 @@ struct ProfilePickerView: View {
                             ProfileDot(name: name)
                             Text(model.question.sections?[name]?.name ?? name)
                             Spacer()
-                            if let guess = model.question.jevGuess, guess.profile.caseInsensitiveCompare(name) == .orderedSame {
+                            if let guess = model.jevGuess, guess.profile.caseInsensitiveCompare(name) == .orderedSame {
                                 Text("Jev's guess · \(guess.confidence.confidenceLabel)")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
@@ -214,7 +257,7 @@ struct ProfilePickerView: View {
             }
 
             HStack {
-                Button(model.question.jevGuess == nil ? "Esc: \(model.question.defaultProfile)" : "Esc: \(model.question.defaultProfile) (Jev's guess)") { model.useDefault() }
+                Button(model.jevGuess == nil ? "Esc: \(model.escapeProfile)" : "Esc: \(model.escapeProfile) (Jev's guess)") { model.useDefault() }
                     .buttonStyle(.link)
                     .keyboardShortcut(.cancelAction)
                     .font(.caption)

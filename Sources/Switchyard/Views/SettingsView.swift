@@ -49,6 +49,14 @@ struct SettingsView: View {
                             .frame(width: 34)
                     }
                 }
+                Picker("Jev decides", selection: Binding(
+                    get: { router.jevDecides },
+                    set: { router.setJevDecides($0) }
+                )) {
+                    Text("Only suggests (you pick)").tag(false)
+                    Text("Links it's confident about").tag(true)
+                }
+                .disabled(!router.hasAPIKey)
                 Picker("When Jev is unsure", selection: $settings.askWhenUnsure) {
                     Text("Ask me").tag(true)
                     Text("Open its best guess").tag(false)
