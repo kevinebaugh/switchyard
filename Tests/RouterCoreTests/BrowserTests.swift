@@ -59,10 +59,11 @@ import Testing
     @Test func eachBrowserOpensItsOwnWay() {
         #expect(BrowserKind.dia.opening == .appleScript)
         #expect(BrowserKind.firefox.opening == .firefoxProfile)
-        for kind in BrowserKind.allCases where kind != .dia && kind != .firefox {
+        #expect(BrowserKind.safari.opening == .plain)
+        for kind in BrowserKind.allCases where ![.dia, .firefox, .safari].contains(kind) {
             #expect(kind.opening == .profileDirectoryFlag)
         }
-        #expect(BrowserKind.allCases.filter { !$0.opensWithArguments } == [.dia])
+        #expect(BrowserKind.allCases.filter { !$0.opensWithArguments } == [.dia, .safari])
     }
 
     @Test func dataFoldersAreDistinct() {

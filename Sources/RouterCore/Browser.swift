@@ -8,6 +8,7 @@ public enum BrowserKind: String, Codable, CaseIterable, Sendable, Identifiable {
     case edge
     case vivaldi
     case firefox
+    case safari
 
     public var id: String { rawValue }
 
@@ -19,6 +20,9 @@ public enum BrowserKind: String, Codable, CaseIterable, Sendable, Identifiable {
         /// Firefox's `-profile <path> -new-tab <url>`: Firefox hands it to that profile's running
         /// instance, or starts one (each Firefox profile runs as its own app).
         case firefoxProfile
+        /// Handed to the browser as is; it opens wherever its front window is (Safari can't be
+        /// told which profile to use).
+        case plain
     }
 
     public var bundleIdentifier: String {
@@ -29,6 +33,7 @@ public enum BrowserKind: String, Codable, CaseIterable, Sendable, Identifiable {
         case .edge: "com.microsoft.edgemac"
         case .vivaldi: "com.vivaldi.Vivaldi"
         case .firefox: "org.mozilla.firefox"
+        case .safari: "com.apple.Safari"
         }
     }
 
@@ -40,6 +45,7 @@ public enum BrowserKind: String, Codable, CaseIterable, Sendable, Identifiable {
         case .edge: "Edge"
         case .vivaldi: "Vivaldi"
         case .firefox: "Firefox"
+        case .safari: "Safari"
         }
     }
 
@@ -53,6 +59,7 @@ public enum BrowserKind: String, Codable, CaseIterable, Sendable, Identifiable {
         case .edge: "Microsoft Edge"
         case .vivaldi: "Vivaldi"
         case .firefox: "Firefox"
+        case .safari: "Safari"
         }
     }
 
@@ -60,18 +67,24 @@ public enum BrowserKind: String, Codable, CaseIterable, Sendable, Identifiable {
         switch self {
         case .dia: .appleScript
         case .firefox: .firefoxProfile
+        case .safari: .plain
         default: .profileDirectoryFlag
         }
     }
 
-    /// Opens through a new app instance with launch arguments (everything but Dia).
+    /// Opens through a new app instance with launch arguments (Chromium browsers and Firefox).
     public var opensWithArguments: Bool {
-        opening != .appleScript
+        opening == .profileDirectoryFlag || opening == .firefoxProfile
+    }
+
+    /// Whether Switchyard can choose among the browser's profiles (all but Safari).
+    public var hasProfiles: Bool {
+        opening != .plain
     }
 
     /// Verified end to end (profile listing and opening in a chosen profile).
     public var isVerified: Bool {
-        self == .dia || self == .chrome || self == .firefox
+        self == .dia || self == .chrome || self == .firefox || self == .safari
     }
 
     public func userDataDirectory(home: URL = FileManager.default.homeDirectoryForCurrentUser) -> URL {

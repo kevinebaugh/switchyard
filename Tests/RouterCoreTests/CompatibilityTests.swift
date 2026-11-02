@@ -60,6 +60,16 @@ import Testing
         #expect(!set.isSafeToWrite)
     }
 
+    @Test func switchyard2MultiBrowserFilesStayVersion2() throws {
+        let set = try load("rules-v2-multibrowser")
+        #expect(set.version == 2)
+        #expect(set.isSafeToWrite)
+        #expect(set.rules.map(\.destination) == [
+            Destination(browser: .firefox, profile: "Personal"), .safari, Destination(browser: .chrome, profile: "Projects"),
+        ])
+        #expect(try roundTrip(set) == set)
+    }
+
     @Test func theFormatVersionOnlyMovesForward() {
         // Bumping this needs a new fixture for the new format, and docs/COMPATIBILITY.md updated.
         #expect(RuleSet.currentVersion == 2)

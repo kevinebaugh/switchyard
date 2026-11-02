@@ -14,9 +14,15 @@ public struct RuleIndex: Sendable {
 
     /// Only `browser`'s rules take part; the others belong to a browser that isn't in use.
     public init(rules: [Rule], browser: BrowserKind = .dia) {
+        self.init(rules: rules, browsers: [browser])
+    }
+
+    /// Rules for every browser in `browsers` take part (Switchyard 2's multi-browser routing);
+    /// a rule for a browser that isn't in use is skipped.
+    public init(rules: [Rule], browsers: Set<BrowserKind>) {
         var rulesByHost: [String: [Rule]] = [:]
         var appRules: [String: Rule] = [:]
-        for rule in rules where !rule.deleted && rule.effectiveBrowser == browser {
+        for rule in rules where !rule.deleted && browsers.contains(rule.effectiveBrowser) {
             if rule.key.isAppRule, let sourceApp = rule.sourceApp {
                 let id = sourceApp.bundleID.lowercased()
                 if let existing = appRules[id], existing.updatedAt >= rule.updatedAt { continue }
@@ -37,22 +43,28 @@ public struct RuleIndex: Sendable {
     ///   - sourceAppBundleID: the app the link was clicked in, if known.
     ///   - availableProfiles: lowercased names of profiles that exist on this Mac.
     ///     Rules targeting any other profile are skipped. `nil` skips nothing.
+    ///   - availableDestinations: the same by `Destination.id` ("firefox/personal"), for several
+    ///     browsers at once. `nil` skips nothing.
     public func match(
         _ url: URL,
         from sourceAppBundleID: String? = nil,
-        availableProfiles: Set<String>? = nil
+        availableProfiles: Set<String>? = nil,
+        availableDestinations: Set<String>? = nil
     ) -> Rule? {
-        let urlRule = matchURL(url, from: sourceAppBundleID, availableProfiles: availableProfiles)
+        let isAvailable: (Rule) -> Bool = { rule in
+            (availableProfiles.map { $0.contains(rule.profileName.lowercased()) } ?? true)
+                && (availableDestinations.map { $0.contains(rule.destination.id) } ?? true)
+        }
+        let urlRule = matchURL(url, from: sourceAppBundleID, isAvailable: isAvailable)
         if let urlRule, urlRule.origin != .learned { return urlRule }
 
-        if let sourceAppBundleID, let appRule = appRule(for: sourceAppBundleID),
-           availableProfiles.map({ $0.contains(appRule.profileName.lowercased()) }) ?? true {
+        if let sourceAppBundleID, let appRule = appRule(for: sourceAppBundleID), isAvailable(appRule) {
             return appRule
         }
         return urlRule
     }
 
-    private func matchURL(_ url: URL, from sourceAppBundleID: String?, availableProfiles: Set<String>?) -> Rule? {
+    private func matchURL(_ url: URL, from sourceAppBundleID: String?, isAvailable: (Rule) -> Bool) -> Rule? {
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
               let rawHost = components.host, !rawHost.isEmpty else {
             return nil
@@ -70,7 +82,7 @@ public struct RuleIndex: Sendable {
             let candidateHost = labels.joined(separator: ".")
             for rule in rulesByHost[candidateHost] ?? [] {
                 if rule.hostMatch == .exact, candidateHost != host { continue }
-                if let availableProfiles, !availableProfiles.contains(rule.profileName.lowercased()) { continue }
+                if !isAvailable(rule) { continue }
                 if let ruleApp = rule.sourceApp,
                    ruleApp.bundleID.lowercased() != sourceAppBundleID?.lowercased() { continue }
                 guard Self.pathMatches(path, prefix: rule.pathPrefix),

@@ -462,6 +462,16 @@ private struct PermissionStep: View {
                 denied: "macOS is blocking Switchyard from controlling \(name). Turn on \(name) under Switchyard in Privacy & Security → Automation.",
                 footnote: "This lets Switchyard send commands to \(name) only. It can't see or control other apps."
             )
+        case .plain:
+            // Safari needs no permission: links are handed to it as is. Setup skips this step.
+            return Copy(
+                title: "\(name) is ready",
+                subtitle: "Switchyard hands links to \(name) directly, so there's nothing to allow.",
+                action: "Continue",
+                granted: "Switchyard can open links in \(name).",
+                denied: "",
+                footnote: "\(name) can't be told which profile to use, so links open in its front window."
+            )
         case .profileDirectoryFlag, .firefoxProfile:
             return Copy(
                 title: "Let Switchyard read your \(name) profiles",

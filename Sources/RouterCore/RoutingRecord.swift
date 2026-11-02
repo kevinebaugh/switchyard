@@ -12,7 +12,12 @@ public struct RoutingRecord: Codable, Identifiable, Hashable, Sendable {
     public var sourceBundleID: String?
     public var learnedRuleID: UUID?
     public var correctedTo: String?
+    /// The browser it was moved to, when that's a different one (Switchyard 2).
+    public var correctedBrowser: BrowserKind?
     public var openError: String?
+    /// The browser it opened in. Nil for records from before Switchyard 2 (history is a cache):
+    /// those opened in the one browser in use then.
+    public var browser: BrowserKind?
     /// Jev's answer once it could be reached again, for a link that fell back because it couldn't.
     public var catchUp: CatchUp?
 
@@ -72,6 +77,17 @@ public struct RoutingRecord: Codable, Identifiable, Hashable, Sendable {
     public var isAwaitingCatchUp: Bool {
         guard case let .fallback(reason) = decision, reason.isNetworkFailure else { return false }
         return catchUp == nil && correctedTo == nil && learnedRuleID == nil
+    }
+
+    /// Where it opened first, given the browser in use when the record has none.
+    public func destination(defaultBrowser: BrowserKind) -> Destination {
+        Destination(browser: browser ?? defaultBrowser, profile: profileName)
+    }
+
+    /// Where it ended up after any correction.
+    public func finalDestination(defaultBrowser: BrowserKind) -> Destination {
+        guard let correctedTo else { return destination(defaultBrowser: defaultBrowser) }
+        return Destination(browser: correctedBrowser ?? browser ?? defaultBrowser, profile: correctedTo)
     }
 
     /// Where the link ended up after any correction.

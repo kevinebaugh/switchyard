@@ -1,0 +1,35 @@
+{
+  "rules" : [
+    {
+      "browser" : "firefox",
+      "deleted" : false,
+      "host" : "example.com",
+      "hostMatch" : "domain",
+      "id" : "AAAAAAAA-0000-0000-0000-000000000001",
+      "origin" : "corrected",
+      "profileName" : "Personal",
+      "updatedAt" : "2026-11-02T09:00:00Z"
+    },
+    {
+      "browser" : "safari",
+      "deleted" : false,
+      "host" : "acme.com",
+      "hostMatch" : "domain",
+      "id" : "AAAAAAAA-0000-0000-0000-000000000002",
+      "origin" : "corrected",
+      "profileName" : "Safari",
+      "updatedAt" : "2026-11-02T09:01:00Z"
+    },
+    {
+      "browser" : "chrome",
+      "deleted" : false,
+      "host" : "side.dev",
+      "hostMatch" : "domain",
+      "id" : "AAAAAAAA-0000-0000-0000-000000000003",
+      "origin" : "learned",
+      "profileName" : "Projects",
+      "updatedAt" : "2026-11-02T09:02:00Z"
+    }
+  ],
+  "version" : 2
+}
