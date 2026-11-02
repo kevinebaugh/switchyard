@@ -93,13 +93,7 @@ struct SettingsView: View {
             }
 
             Section("System") {
-                LabeledContent("Browser") {
-                    HStack {
-                        Text(settings.browser.displayName)
-                        Button("Change…") { OnboardingWindow.shared.show() }
-                            .help("Setup lets you pick another browser")
-                    }
-                }
+                BrowsersSetting()
                 LabeledContent("Default browser") {
                     if isDefaultBrowser {
                         Label("Switchyard", systemImage: "checkmark.circle.fill")
@@ -304,6 +298,74 @@ struct SettingsView: View {
             lines.append("would save: \(verdict.learn?.label ?? "nothing")")
             testResult = lines.joined(separator: "\n")
             isTesting = false
+        }
+    }
+}
+
+/// The browsers links can open in. The first is the one Switchyard was set up with; more can be
+/// added, each asking once for whatever macOS permission it needs (none for Safari).
+private struct BrowsersSetting: View {
+    @EnvironmentObject private var router: Router
+    @EnvironmentObject private var settings: AppSettings
+    @State private var adding: BrowserKind?
+    @State private var problem: String?
+
+    var body: some View {
+        let addable = Browsers.installed.filter { !settings.browsers.contains($0) }
+        LabeledContent("Browsers") {
+            VStack(alignment: .trailing, spacing: 6) {
+                ForEach(settings.browsers, id: \.self) { kind in
+                    HStack(spacing: 6) {
+                        Text(kind.displayName)
+                        if kind == settings.browsers.first, settings.isMultiBrowser {
+                            Text("original").font(.caption).foregroundStyle(.secondary)
+                        }
+                        if settings.isMultiBrowser {
+                            Button {
+                                router.setBrowsers(settings.browsers.filter { $0 != kind })
+                            } label: {
+                                Image(systemName: "minus.circle")
+                            }
+                            .buttonStyle(.borderless)
+                            .help("Stop opening links in \(kind.displayName). Its rules are kept.")
+                            .accessibilityLabel("Remove \(kind.displayName)")
+                        }
+                    }
+                }
+                if !addable.isEmpty {
+                    Menu(adding.map { "Adding \($0.displayName)…" } ?? "Add Browser…") {
+                        ForEach(addable, id: \.self) { kind in
+                            Button(kind.displayName) { add(kind) }
+                        }
+                    }
+                    .fixedSize()
+                    .disabled(adding != nil)
+                }
+            }
+        }
+        if settings.isMultiBrowser {
+            Text("Each profile of every browser here is a destination: in the picker, in corrections, and for Jev. Safari opens links in its front window.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        if let problem {
+            Text(problem).font(.caption).foregroundStyle(.red)
+        }
+    }
+
+    private func add(_ kind: BrowserKind) {
+        adding = kind
+        problem = nil
+        Task {
+            let adapter = Browsers.adapter(for: kind)
+            if kind.opening == .appleScript { await adapter.ensureRunning() }
+            let permission = await adapter.permission(ask: true)
+            adding = nil
+            guard permission == .granted else {
+                problem = "macOS didn't allow Switchyard to use \(kind.displayName). Allow it in System Settings → Privacy & Security, then add it again."
+                return
+            }
+            router.setBrowsers(settings.browsers + [kind])
         }
     }
 }

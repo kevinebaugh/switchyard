@@ -20,6 +20,9 @@ final class ProfilePicker {
         var jevGuess: (profile: String, confidence: Double)? = nil
         /// The scope to preselect (Jev's, when it gave one).
         var preferredScope: RuleKey? = nil
+        /// With several browsers: each label's browser (a section header) and short name
+        /// ("Firefox", "Personal"). Nil with one browser.
+        var sections: [String: (browser: String, name: String)]? = nil
     }
 
     struct Answer {
@@ -125,10 +128,29 @@ final class ProfilePickerModel: ObservableObject {
 struct ProfilePickerView: View {
     @ObservedObject var model: ProfilePickerModel
 
+    /// A browser without profiles (Safari) after another browser's group: set apart by a divider.
+    private func startsProfilelessBrowser(at index: Int) -> Bool {
+        guard index > 0, let sections = model.question.sections,
+              let section = sections[model.question.profiles[index]] else { return false }
+        return section.name == section.browser
+            && sections[model.question.profiles[index - 1]]?.browser != section.browser
+    }
+
+    /// The browser's name above the first of its destinations, with several browsers.
+    private func sectionHeader(at index: Int) -> String? {
+        guard let sections = model.question.sections else { return nil }
+        let profiles = model.question.profiles
+        guard let section = sections[profiles[index]] else { return nil }
+        // A browser without profiles (Safari) is a row of its own, not a header over one row.
+        guard section.name != section.browser else { return nil }
+        guard index == 0 || sections[profiles[index - 1]]?.browser != section.browser else { return nil }
+        return section.browser
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Open in which profile?")
+                Text(model.question.sections == nil ? "Open in which profile?" : "Where should this open?")
                     .font(.headline)
                 Text(model.question.url.displayHost)
                     .font(.callout)
@@ -139,6 +161,16 @@ struct ProfilePickerView: View {
 
             VStack(spacing: 4) {
                 ForEach(Array(model.question.profiles.prefix(9).enumerated()), id: \.element) { index, name in
+                    if startsProfilelessBrowser(at: index) {
+                        Divider().padding(.vertical, 4)
+                    } else if let header = sectionHeader(at: index) {
+                        Text(header)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.top, index == 0 ? 0 : 6)
+                            .accessibilityAddTraits(.isHeader)
+                    }
                     Button { model.pick(name) } label: {
                         HStack(spacing: 8) {
                             Text("\(index + 1)")
@@ -146,7 +178,7 @@ struct ProfilePickerView: View {
                                 .foregroundStyle(.secondary)
                                 .frame(width: 16)
                             ProfileDot(name: name)
-                            Text(name)
+                            Text(model.question.sections?[name]?.name ?? name)
                             Spacer()
                             if let guess = model.question.jevGuess, guess.profile.caseInsensitiveCompare(name) == .orderedSame {
                                 Text("Jev's guess · \(guess.confidence.confidenceLabel)")

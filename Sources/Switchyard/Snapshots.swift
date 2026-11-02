@@ -182,6 +182,15 @@ enum Snapshots {
             jevGuess: ("Work", 0.56), preferredScope: question.scopes.last)
         let guessView = ProfilePickerView(model: ProfilePickerModel(question: unsure, waiting: 0) { _ in })
         writeBothAppearances(guessView, size: NSSize(width: 330, height: 250), to: directory, name: "picker-unsure")
+
+        // Several browsers: destinations grouped under each browser's name.
+        let multi = ProfilePicker.Question(
+            url: url, profiles: ["Firefox · Personal", "Firefox · Test", "Chrome · Projects", "Safari"],
+            defaultProfile: "Firefox · Personal", scopes: question.scopes,
+            sections: ["Firefox · Personal": ("Firefox", "Personal"), "Firefox · Test": ("Firefox", "Test"),
+                       "Chrome · Projects": ("Chrome", "Projects"), "Safari": ("Safari", "Safari")])
+        let multiView = ProfilePickerView(model: ProfilePickerModel(question: multi, waiting: 0) { _ in })
+        writeBothAppearances(multiView, size: NSSize(width: 330, height: 330), to: directory, name: "picker-browsers")
     }
 
     /// The support reminder card at the top of Recent.

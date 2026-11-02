@@ -201,7 +201,12 @@ final class Router: ObservableObject {
                 break
             }
         }
-        if let question {
+        if var question {
+            if profiles.isMultiBrowser {
+                question.sections = Dictionary(uniqueKeysWithValues: profiles.destinations.map {
+                    (profiles.label(for: $0), (browser: $0.browser.displayName, name: $0.profile))
+                })
+            }
             if let answer = await ProfilePicker.shared.ask(question) {
                 if let key = answer.remember {
                     pickedRuleID = rules.upsert(key: key, profileName: answer.profileName, origin: .corrected).id

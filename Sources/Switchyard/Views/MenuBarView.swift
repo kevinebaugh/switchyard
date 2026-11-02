@@ -407,9 +407,10 @@ struct RulesView: View {
 
     var body: some View {
         let live = rules.browserRules
-        let rows = RuleListing.arrange(rules: live, usage: usage.usage, query: query, profile: profileFilter)
+        let rows = RuleListing.arrange(rules: live, usage: usage.usage, query: query, profile: profileFilter,
+                                       destinationName: { profiles.label(for: $0.destination) })
         let addCandidate = RuleListing.addCandidate(for: query, existing: live)
-        let counts = Dictionary(grouping: live, by: { $0.profileName.lowercased() }).mapValues(\.count)
+        let counts = Dictionary(grouping: live, by: { profiles.label(for: $0.destination).lowercased() }).mapValues(\.count)
 
         VStack(spacing: 0) {
             VStack(spacing: 8) {
@@ -576,17 +577,19 @@ struct RuleRow: View {
             }
             Spacer()
             Picker("", selection: Binding(
-                get: { rule.profileName },
+                get: { profiles.label(for: rule.destination) },
                 set: { newValue in
                     var updated = rule
-                    updated.profileName = newValue
+                    let destination = profiles.destination(named: newValue) ?? rule.destination
+                    updated.profileName = destination.profile
+                    updated.browser = destination.browser
                     updated.origin = .manual
                     rules.update(updated)
                 }
             )) {
                 ForEach(profiles.names, id: \.self) { Text($0).tag($0) }
-                if !profiles.names.contains(rule.profileName) {
-                    Text(rule.profileName).tag(rule.profileName)
+                if !profiles.names.contains(profiles.label(for: rule.destination)) {
+                    Text(profiles.label(for: rule.destination)).tag(profiles.label(for: rule.destination))
                 }
             }
             .labelsHidden()

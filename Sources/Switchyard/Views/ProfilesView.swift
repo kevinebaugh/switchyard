@@ -18,6 +18,20 @@ struct ProfilesView: View {
 
     private var names: [String] { profilesOverride?.map(\.name) ?? profiles.names }
 
+    /// With several browsers, each browser's name heads its destinations.
+    private func browserHeader(at index: Int, in names: [String]) -> String? {
+        guard profilesOverride == nil, profiles.isMultiBrowser else { return nil }
+        let browser = profiles.destination(named: names[index])?.browser
+        guard index == 0 || profiles.destination(named: names[index - 1])?.browser != browser else { return nil }
+        return browser?.displayName
+    }
+
+    /// "Personal" under the Firefox header, rather than "Firefox · Personal".
+    private func shortName(_ name: String) -> String {
+        guard profilesOverride == nil, profiles.isMultiBrowser, let destination = profiles.destination(named: name) else { return name }
+        return destination.browser.hasProfiles ? destination.profile : destination.browser.displayName
+    }
+
     /// The profile whose description was just saved, for a moment's "Saved".
     @State private var savedName: String?
     @State private var hideSaved: Task<Void, Never>?
@@ -34,7 +48,7 @@ struct ProfilesView: View {
 
     var body: some View {
         let names = names
-        let counts = Dictionary(grouping: rules.browserRules, by: { $0.profileName.lowercased() }).mapValues(\.count)
+        let counts = Dictionary(grouping: rules.browserRules, by: { profiles.label(for: $0.destination).lowercased() }).mapValues(\.count)
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 Text("Jev reads these to decide where links without a rule go. Name the accounts, workspaces and tools each profile is for. Changes save as you type.")
@@ -47,11 +61,18 @@ struct ProfilesView: View {
                         .foregroundStyle(.secondary)
                 }
 
-                ForEach(names, id: \.self) { name in
+                ForEach(Array(names.enumerated()), id: \.element) { index, name in
+                    if let header = browserHeader(at: index, in: names) {
+                        Text(header)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .padding(.top, index == 0 ? 0 : 8)
+                            .accessibilityAddTraits(.isHeader)
+                    }
                     VStack(alignment: .leading, spacing: 6) {
                         HStack(spacing: 8) {
                             ProfileDot(name: name)
-                            Text(name).font(.headline)
+                            Text(shortName(name)).font(.headline)
                             let count = counts[name.lowercased()] ?? 0
                             Text(count == 1 ? "1 rule" : "\(count) rules")
                                 .font(.callout)

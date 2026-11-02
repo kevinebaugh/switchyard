@@ -30,16 +30,17 @@ public enum RuleListing {
         usage: [UUID: RuleUsage],
         query: String,
         profile: String?,
-        now: Date = Date()
+        now: Date = Date(),
+        destinationName: (Rule) -> String = { $0.profileName }
     ) -> [Row] {
         let terms = query.lowercased().split(whereSeparator: \.isWhitespace).map(String.init)
         return rules
             .filter { !$0.deleted }
             .filter { rule in
-                profile.map { rule.profileName.caseInsensitiveCompare($0) == .orderedSame } ?? true
+                profile.map { destinationName(rule).caseInsensitiveCompare($0) == .orderedSame } ?? true
             }
             .filter { rule in
-                let haystack = "\(rule.key.label) \(rule.profileName)".lowercased()
+                let haystack = "\(rule.key.label) \(destinationName(rule))".lowercased()
                 return terms.allSatisfy { haystack.contains($0) }
             }
             .map { rule in
