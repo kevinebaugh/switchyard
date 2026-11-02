@@ -13,7 +13,7 @@ body:
     id: diagnostics
     attributes:
       label: Diagnostics
-      description: In Switchyard's menu, open Settings → System → Copy Diagnostics, then paste here. It contains no links, profile names or keys.
+      description: In Switchyard's menu, open Settings → Advanced → Copy Diagnostics, then paste here. It contains no links, profile names or keys.
       render: markdown
     validations:
       required: true

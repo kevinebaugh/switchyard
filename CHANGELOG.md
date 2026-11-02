@@ -2,6 +2,11 @@
 
 All notable changes to Switchyard. Versions follow [Semantic Versioning](https://semver.org).
 
+## [2.0.2] - 2026-11-02
+
+- **Calmer Settings:** General, Jev and Support up front; the confidence threshold, rules folder, Test a link, Copy Diagnostics and Run Setup Again move under **Advanced**. Version, Check for Updates… and About share one row at the bottom.
+- Update notes now show formatting (bold, code and links) instead of raw Markdown.
+
 ## [2.0.1] - 2026-11-02
 
 - **Brave, Edge and Vivaldi are supported:** tested opening links in a chosen profile (running or not) and reading their profile lists.

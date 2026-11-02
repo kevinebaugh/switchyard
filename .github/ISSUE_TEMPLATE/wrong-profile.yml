@@ -31,5 +31,5 @@ body:
     id: diagnostics
     attributes:
       label: Diagnostics (optional)
-      description: Settings → System → Copy Diagnostics.
+      description: Settings → Advanced → Copy Diagnostics.
       render: markdown

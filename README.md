@@ -24,7 +24,7 @@ Inspired by [jdsimcoe/dia-router](https://github.com/jdsimcoe/dia-router), which
 | Safari | Handed to Safari as is (Safari can't be told which profile to use), so it opens in Safari's front window | Nothing | Supported, as one destination |
 | Brave, Edge, Vivaldi | Same as Chrome | Same as Chrome | Supported. Vivaldi shows a welcome screen the first time a new profile opens, which can swallow that one link |
 
-Setup starts with one browser. Add more in **Settings → System → Browsers**: every profile of every browser there becomes a destination, in the picker, in corrections, and for Jev. Rules remember their browser, so removing one keeps its rules for later.
+Setup starts with one browser. Add more in **Settings → General → Browsers**: every profile of every browser there becomes a destination, in the picker, in corrections, and for Jev. Rules remember their browser, so removing one keeps its rules for later.
 
 ## How a link is routed
 
@@ -83,7 +83,7 @@ Routing notifications offer **Personal was right**, which saves a rule for that 
 
 ## Updates
 
-Switchyard updates itself with [Sparkle](https://sparkle-project.org). It checks daily, which you can turn off in **Settings → Updates**; **Check for Updates…** is there too. Every update is signed, and Switchyard only installs ones signed with its own key. Your rules, settings and permissions carry over, and updates never re-run setup.
+Switchyard updates itself with [Sparkle](https://sparkle-project.org). It checks daily, which you can turn off in **Settings → Advanced**; **Check for Updates…** is at the bottom of Settings. Every update is signed, and Switchyard only installs ones signed with its own key. Your rules, settings and permissions carry over, and updates never re-run setup.
 
 ## Syncing rules between Macs
 
@@ -111,7 +111,7 @@ Switchyard is signed and notarized by Apple, and it updates itself (see [Updates
 
 ## Troubleshooting
 
-**Links don't reach Switchyard.** Switchyard only sees links while it's the default browser. Open Switchyard (from Applications or Spotlight) and it offers to fix that, or use Settings → System → Make Default. Some apps keep their own browser setting; Slack, for example, follows the system default.
+**Links don't reach Switchyard.** Switchyard only sees links while it's the default browser. Open Switchyard (from Applications or Spotlight) and it offers to fix that, or use Settings → General → Make Default. Some apps keep their own browser setting; Slack, for example, follows the system default.
 
 **A link opened in the wrong profile.** In Recent, open the row's ↪︎ menu and choose "Should have opened in…". Switchyard reopens the link where it belongs and saves a rule. If Jev keeps guessing wrong for a kind of site, make that profile's description more specific in the Profiles tab.
 
@@ -125,13 +125,13 @@ Dia instead needs Automation permission for Switchyard: System Settings → Priv
 
 **The picker doesn't appear.** It only appears when there's no TypeSafe key and no rule matches. With a key, Jev decides instead.
 
-**Notifications don't appear.** Settings → Notifications shows whether macOS allows them, with a shortcut to System Settings. A Focus holds notifications back; they still collect in Notification Center.
+**Notifications don't appear.** If macOS is holding them back, Settings → General says so, with a shortcut to System Settings. A Focus holds notifications back; they still collect in Notification Center.
 
-**Start setup over.** Settings → System → Run Setup Again…. To try setup without touching your real settings, run `scripts/rehearse-onboarding.sh` from a checkout of this repository.
+**Start setup over.** Settings → Advanced → Run Setup Again…. To try setup without touching your real settings, run `scripts/rehearse-onboarding.sh` from a checkout of this repository.
 
 **Logs.** Open Console, search for `subsystem:com.kevinebaugh.switchyard`, and turn on Action → Include Info Messages. The categories are `router` (each link's decision), `rules` (sync and recovery) and `connectivity` (offline handling).
 
-**Still stuck?** [Open an issue](https://github.com/kevinebaugh/switchyard/issues/new/choose) and paste the output of Settings → System → Copy Diagnostics. It contains no links, profile names or keys.
+**Still stuck?** [Open an issue](https://github.com/kevinebaugh/switchyard/issues/new/choose) and paste the output of Settings → Advanced → Copy Diagnostics. It contains no links, profile names or keys.
 
 ## Build from source
 
@@ -155,7 +155,7 @@ On first launch, a setup window walks you through the steps:
 
 If you close the window partway, the menu offers to finish setup later.
 
-You can run it again from **Settings → Run Setup Again…**.
+You can run it again from **Settings → Advanced → Run Setup Again…**.
 
 After setup, opening Switchyard (launching it, or opening it again while it's running) checks that it's still the default browser. If another browser has taken over, macOS asks whether to switch back.
 
@@ -230,7 +230,7 @@ build/Switchyard.noindex/Switchyard.app/Contents/MacOS/Switchyard --snapshot-onb
 
 Switchyard is free and open source. If it saves you from wrong-profile tabs, you can [support it once](https://buy.stripe.com/6oU8wR2sC1eJcLT4tW0ZW00), paying what you want ($10 suggested). 1% goes to removing carbon from the atmosphere through Stripe Climate.
 
-Every 50 links, at most once a week, Switchyard shows a small card in Recent and a quiet notification asking for support. Paying stops them for good, on every Mac that shares your rules folder. Paid but still seeing them (say, you paid on your phone)? Settings → Support links to a short form. Routing is never affected.
+Every 50 links, at most once a week, Switchyard shows a small card in Recent and a quiet notification asking for support. Paying stops them for good, on every Mac that shares your rules folder. Paid but still seeing them (say, you paid on your phone)? Settings → Advanced links to a short form. Routing is never affected.
 
 ## License
 
