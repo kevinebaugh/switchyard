@@ -84,7 +84,7 @@ public enum BrowserKind: String, Codable, CaseIterable, Sendable, Identifiable {
 
     /// Verified end to end (profile listing and opening in a chosen profile).
     public var isVerified: Bool {
-        self == .dia || self == .chrome || self == .firefox || self == .safari
+        true   // all verified: Dia, Chrome, Firefox and Safari by use; Brave, Edge and Vivaldi in 2.0.1
     }
 
     public func userDataDirectory(home: URL = FileManager.default.homeDirectoryForCurrentUser) -> URL {

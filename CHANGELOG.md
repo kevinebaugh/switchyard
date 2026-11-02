@@ -2,6 +2,10 @@
 
 All notable changes to Switchyard. Versions follow [Semantic Versioning](https://semver.org).
 
+## [2.0.1] - 2026-11-02
+
+- **Brave, Edge and Vivaldi are supported:** tested opening links in a chosen profile (running or not) and reading their profile lists.
+
 ## [2.0.0] - 2026-11-02
 
 Switchyard 2: every link in the right browser and profile, learned from you.

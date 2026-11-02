@@ -6,7 +6,7 @@
 
 **Every link in the right browser and profile.**
 
-Switchyard is a macOS menu-bar app that opens every link where it belongs: work links in your work profile, personal links in your personal one, and, if you like, side projects in a different browser altogether. It works with [Dia](https://www.diabrowser.com/), [Chrome](https://www.google.com/chrome/), [Firefox](https://www.firefox.com/) and Safari, alone or together, and should work with Brave, Edge and Vivaldi.
+Switchyard is a macOS menu-bar app that opens every link where it belongs: work links in your work profile, personal links in your personal one, and, if you like, side projects in a different browser altogether. It works with [Dia](https://www.diabrowser.com/), [Chrome](https://www.google.com/chrome/), [Firefox](https://www.firefox.com/), Safari, [Brave](https://brave.com/), [Edge](https://www.microsoft.com/edge) and [Vivaldi](https://vivaldi.com/), alone or together.
 
 **It learns from you.** For a site it doesn't know yet, a small picker appears by the cursor: press 1, 2, 3… to choose where it opens, or Esc for your default. Your answer becomes a rule, so each site is asked about once, and links that match a rule open instantly, without going online. As rules pile up, Switchyard suggests broader ones ("Send all of acme.com to Work?", "Always open links from Slack in Work?").
 
@@ -22,7 +22,7 @@ Inspired by [jdsimcoe/dia-router](https://github.com/jdsimcoe/dia-router), which
 | Chrome | `--profile-directory`, handed to the running Chrome | Access to Chrome's data folder, to read its profiles | Supported |
 | Firefox | `-profile <folder> -new-tab`, handed to that profile's running Firefox (each Firefox profile runs as its own app) | Access to Firefox's data folder, to read its profiles | Supported |
 | Safari | Handed to Safari as is (Safari can't be told which profile to use), so it opens in Safari's front window | Nothing | Supported, as one destination |
-| Brave, Edge, Vivaldi | Same as Chrome | Same as Chrome | Should work; not yet tested |
+| Brave, Edge, Vivaldi | Same as Chrome | Same as Chrome | Supported. Vivaldi shows a welcome screen the first time a new profile opens, which can swallow that one link |
 
 Setup starts with one browser. Add more in **Settings → System → Browsers**: every profile of every browser there becomes a destination, in the picker, in corrections, and for Jev. Rules remember their browser, so removing one keeps its rules for later.
 
