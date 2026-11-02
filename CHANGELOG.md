@@ -2,7 +2,7 @@
 
 All notable changes to Switchyard. Versions follow [Semantic Versioning](https://semver.org).
 
-## [Unreleased]
+## [2.0.0] - 2026-11-02
 
 Switchyard 2: every link in the right browser and profile, learned from you.
 
